@@ -1,0 +1,10 @@
+id: windsurf
+name: Windsurf
+discovery: native-skills
+frontmatter_fields: [name, description, license, metadata]
+capabilities:
+  shell: {supported: true, caveat: run in agent terminal with approval}
+  network: {supported: true}
+  fs_write: {supported: true}
+script_runtime: null
+notes: Windsurf (Codeium) native SKILL.md directory.

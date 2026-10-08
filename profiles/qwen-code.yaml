@@ -1,0 +1,10 @@
+id: qwen-code
+name: Qwen Code
+discovery: native-skills
+frontmatter_fields: [name, description, license, metadata]
+capabilities:
+  shell: {supported: true}
+  network: {supported: true}
+  fs_write: {supported: true}
+script_runtime: python
+notes: Gemini CLI fork; native skills support.

@@ -71,3 +71,17 @@ def test_apply_also_records(monkeypatch, tmp_path: Path, isolated_store) -> None
     assert r.json()["results"][0]["ok"] is True  # full* tier is one-click applicable
     codex = next(p for p in c.get("/api/installed").json()["platforms"] if p["agent"] == "codex")
     assert [s["skill"] for s in codex["skills"]] == ["log-cleaner"]
+
+
+def test_installed_reports_detected(monkeypatch, tmp_path: Path, isolated_store) -> None:
+    """Platforms report detected=True only when their config dir exists (cc-switch pill)."""
+    from tardigrade_skill.dispatcher import DETECT_DIRS
+
+    monkeypatch.setitem(DETECT_DIRS, "codex", str(tmp_path / "codex-home"))
+    monkeypatch.setitem(DETECT_DIRS, "claude-code", str(tmp_path / "claude-home"))
+    (tmp_path / "codex-home").mkdir()
+    c = _client()
+    platforms = {p["agent"]: p["detected"] for p in c.get("/api/installed").json()["platforms"]}
+    assert platforms["codex"] is True
+    assert platforms["claude-code"] is False
+    assert len(platforms) >= 18

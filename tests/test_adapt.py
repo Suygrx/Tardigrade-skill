@@ -47,7 +47,8 @@ def _make_profile(**overrides) -> PlatformProfile:
 
 def test_load_shipped_profiles() -> None:
     profiles = load_profiles(default_profiles_dir())
-    assert set(profiles) == {"claude-code", "codex", "gemini-cli", "cursor", "opencode"}
+    assert {"claude-code", "codex", "gemini-cli", "cursor", "opencode"} <= set(profiles)
+    assert len(profiles) >= 18  # mainstream desktop agents shipped (see dispatcher.TARGETS)
     assert profiles["claude-code"].supports_skills
     assert profiles["cursor"].discovery == "resident-rules"
     assert profiles["opencode"].script_runtime is None

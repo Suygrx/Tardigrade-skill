@@ -317,9 +317,14 @@ def create_app() -> FastAPI:
 
     @app.get("/api/installed")
     def installed() -> dict:
-        """Per-platform listing of skills installed via Tardigrade (CC Switch home)."""
-        import os
+        """Per-platform listing of skills installed via Tardigrade (CC Switch home).
 
+        `detected` = the platform's config dir exists on this machine, so the
+        UI can show only platforms the user actually has (cc-switch behavior).
+        """
+        from tardigrade_skill.dispatcher import detect_platforms
+
+        detected = detect_platforms()
         all_installs = adapt_llm.list_installs()
         out = []
         for p in profiles.values():
@@ -330,7 +335,7 @@ def create_app() -> FastAPI:
                 dest = Path(rec["dest"])
                 present = dest.is_dir()
                 items.append({**rec, "present": present})
-            out.append({"agent": p.id, "name": p.name, "discovery": p.discovery, "skills": items})
+            out.append({"agent": p.id, "name": p.name, "discovery": p.discovery, "detected": detected.get(p.id, False), "skills": items})
         return {"platforms": out}
 
     @app.post("/api/uninstall")

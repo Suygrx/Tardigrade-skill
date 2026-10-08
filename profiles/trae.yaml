@@ -1,0 +1,10 @@
+id: trae
+name: Trae
+discovery: native-skills
+frontmatter_fields: [name, description, license, metadata]
+capabilities:
+  shell: {supported: true, caveat: run in agent terminal with approval}
+  network: {supported: true}
+  fs_write: {supported: true}
+script_runtime: null
+notes: Trae IDE native skills directory.

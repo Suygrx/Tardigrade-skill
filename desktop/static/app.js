@@ -85,6 +85,19 @@ const AGENT_META = {
   "gemini-cli": { icon: "✦", color: "#4285f4", short: "Gemini" },
   "cursor": { icon: "▣", color: "#9ca3af", short: "Cursor" },
   "opencode": { icon: "⌘", color: "#a78bfa", short: "OpenCode" },
+  "github-copilot": { icon: "◍", color: "#7cb8f8", short: "Copilot" },
+  "windsurf": { icon: "≋", color: "#2dd4bf", short: "Windsurf" },
+  "qwen-code": { icon: "✧", color: "#a78bfa", short: "Qwen" },
+  "iflow-cli": { icon: "❋", color: "#f97316", short: "iFlow" },
+  "crush": { icon: "▚", color: "#f472b6", short: "Crush" },
+  "goose": { icon: "◔", color: "#fbbf24", short: "Goose" },
+  "droid": { icon: "◇", color: "#9ca3af", short: "Droid" },
+  "amp": { icon: "⌁", color: "#e5e7eb", short: "Amp" },
+  "cline": { icon: "⬡", color: "#60a5fa", short: "Cline" },
+  "roo": { icon: "▲", color: "#f87171", short: "Roo" },
+  "kilo": { icon: "◆", color: "#34d399", short: "Kilo" },
+  "trae": { icon: "▣", color: "#ef4444", short: "Trae" },
+  "trae-cn": { icon: "▣", color: "#dc2626", short: "Trae CN" },
 };
 
 async function loadHome() {
@@ -94,17 +107,43 @@ async function loadHome() {
     INSTALLED = await api("/api/installed");
     renderPlatformPill();
     renderHome();
+    populateAgentSelect();
   } catch (e) {
     box.innerHTML = `<div class="loading">加载失败：${e.message}</div>`;
   }
 }
 
+function populateAgentSelect() {
+  const sel = $("#discover-agent");
+  const current = sel.value;
+  sel.innerHTML = INSTALLED.platforms
+    .map((p) => `<option value="${p.agent}">${p.name}</option>`)
+    .join("");
+  if (INSTALLED.platforms.some((p) => p.agent === current)) sel.value = current;
+}
+
+function visiblePlatforms() {
+  // 只显示本机探测到的平台（cc-switch 行为）；一个都没探测到则全部显示
+  const detected = INSTALLED.platforms.filter((p) => p.detected);
+  return detected.length ? detected : INSTALLED.platforms;
+}
+
+function ensureSelectedPlatform() {
+  const vis = visiblePlatforms();
+  if (!vis.some((p) => p.agent === SELECTED_PLATFORM)) {
+    SELECTED_PLATFORM = vis[0]?.agent || "claude-code";
+    localStorage.setItem("tardigrade.platform", SELECTED_PLATFORM);
+  }
+}
+
 function renderPlatformPill() {
+  ensureSelectedPlatform();
   const pill = $("#platform-pill");
-  pill.innerHTML = INSTALLED.platforms
+  const vis = visiblePlatforms();
+  pill.innerHTML = vis
     .map((p) => {
       const meta = AGENT_META[p.agent] || { icon: "◆", color: "#9ca3af", short: p.name };
-      return `<button class="as-btn ${p.agent === SELECTED_PLATFORM ? "active" : ""}" data-platform="${p.agent}" title="${p.name}">
+      return `<button class="as-btn ${p.agent === SELECTED_PLATFORM ? "active" : ""}" data-platform="${p.agent}" title="${p.name}${p.detected ? "" : "（未检测到安装）"}">
         <span class="as-glyph" style="color:${meta.color}">${meta.icon}</span>${meta.short}
       </button>`;
     })
