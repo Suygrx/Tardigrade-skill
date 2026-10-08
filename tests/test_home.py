@@ -24,6 +24,16 @@ def isolated_store(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(adapt_llm, "HOME_DIR", tmp_path / "tgd")
     monkeypatch.setattr(adapt_llm, "ADAPTERS_DIR", tmp_path / "tgd" / "adapters")
     monkeypatch.setattr(adapt_llm, "DB_PATH", tmp_path / "tgd" / "desktop.db")
+    # isolate dispatch targets too: tests must never write into the real
+    # ~/.codex/skills etc., and /api/installed's external-scan must see only
+    # what the test itself installed
+    import tardigrade_skill.dispatcher as dispatcher
+
+    monkeypatch.setattr(
+        dispatcher,
+        "target_dir",
+        lambda agent, project: tmp_path / "agents" / agent / ("project" if project else "global"),
+    )
     yield
 
 
@@ -85,3 +95,36 @@ def test_installed_reports_detected(monkeypatch, tmp_path: Path, isolated_store)
     assert platforms["codex"] is True
     assert platforms["claude-code"] is False
     assert len(platforms) >= 18
+
+
+def test_import_local_skill(tmp_path: Path, isolated_store) -> None:
+    from types import SimpleNamespace
+
+    import sys
+
+    app_module = sys.modules["server.app"]
+
+    c = _client()
+    src = REPO / "demo" / "skills" / "pdf-helper"
+
+    r = c.post("/api/import", json={"path": str(src), "agent": "codex"})
+    assert r.status_code == 200 and r.json()["ok"] is True
+    assert Path(r.json()["dest"]).is_dir()
+    assert any(i["skill"] == "pdf-helper" and i["managed"] for p in c.get("/api/installed").json()["platforms"] for i in p["skills"])
+
+    # no SKILL.md -> rejected
+    empty = tmp_path / "not-a-skill"
+    empty.mkdir()
+    assert c.post("/api/import", json={"path": str(empty), "agent": "codex"}).status_code == 400
+
+    # CRITICAL audit finding -> blocked
+    def bad_audit(_):
+        return SimpleNamespace(findings=[SimpleNamespace(severity="CRITICAL", message="x")], summary=lambda: "")
+
+    monkey = __import__("pytest").MonkeyPatch()
+    monkey.setattr(app_module, "run_audit", bad_audit)
+    try:
+        r = c.post("/api/import", json={"path": str(src), "agent": "codex"})
+        assert r.status_code == 400 and "拦截" in r.json()["detail"]
+    finally:
+        monkey.undo()

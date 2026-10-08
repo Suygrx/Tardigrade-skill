@@ -28,6 +28,7 @@ TARGETS: dict[str, tuple[str, str]] = {
     "kilo": ("~/.kilo/skills", ".kilo/skills"),
     "trae": ("~/.trae/skills", ".trae/skills"),
     "trae-cn": ("~/.trae-cn/skills", ".trae-cn/skills"),
+    "workbuddy": ("~/.workbuddy/skills", ".workbuddy/skills"),
 }
 
 # agent id -> config dir whose existence means "this platform is installed"
@@ -51,6 +52,7 @@ DETECT_DIRS: dict[str, str] = {
     "kilo": "~/.kilo",
     "trae": "~/.trae",
     "trae-cn": "~/.trae-cn",
+    "workbuddy": "~/.workbuddy",
 }
 
 

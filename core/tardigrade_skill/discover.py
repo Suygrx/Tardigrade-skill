@@ -17,6 +17,7 @@ Quota exhaustion or offline -> degrade to un-audited listing with a hint to run
 from __future__ import annotations
 
 import json
+import tempfile
 import time
 import zipfile
 from pathlib import Path
@@ -31,6 +32,8 @@ SKILLS_SH_SEARCH_URL = "https://skills.sh/api/search"
 CACHE_PATH = Path("~/.tardigrade/search-cache.json").expanduser()
 CACHE_TTL = 24 * 3600
 HTTP_TIMEOUT = httpx.Timeout(30.0)
+MAX_ZIP_BYTES = 64 * 1024 * 1024  # skip repos whose zipball exceeds ~64MB
+AUDIT_WORKERS = 5
 
 
 def _gh_get(url: str, params: dict | None = None) -> httpx.Response:
@@ -65,7 +68,11 @@ def audit_remote_repo(full_name: str, workdir: Path) -> dict:
             if resp.status_code != 200:
                 return {"badge": "skipped", "detail": f"fetch HTTP {resp.status_code}", "skills": []}
             with open(zip_path, "wb") as f:
+                received = 0
                 for chunk in resp.iter_bytes(65536):
+                    received += len(chunk)
+                    if received > MAX_ZIP_BYTES:
+                        return {"badge": "skipped", "detail": "repo zipball too large (>64MB)", "skills": []}
                     f.write(chunk)
         dest.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(zip_path) as zf:
@@ -208,12 +215,20 @@ def search_skills(query: str, limit: int = 5, use_cache: bool = True) -> dict:
     results = []
     offline = False
     if ranked:
-        import tempfile
+        from concurrent.futures import ThreadPoolExecutor
 
         with tempfile.TemporaryDirectory(prefix="tardigrade-search-") as tmp:
             workdir = Path(tmp)
-            for repo in ranked:
-                audit = audit_remote_repo(repo["full_name"], workdir)
+            # parallel audits: each repo gets its own subdir (zip fetches don't race);
+            # total wall time ~= slowest repo instead of the sum of all five
+            with ThreadPoolExecutor(max_workers=min(AUDIT_WORKERS, len(ranked))) as ex:
+                audits = list(
+                    ex.map(
+                        lambda pair: audit_remote_repo(pair[1]["full_name"], workdir / str(pair[0])),
+                        enumerate(ranked),
+                    )
+                )
+            for repo, audit in zip(ranked, audits):
                 if audit["badge"] == "skipped" and "fetch HTTP" in audit.get("detail", ""):
                     offline = True
                 results.append({**repo, "audit": audit})

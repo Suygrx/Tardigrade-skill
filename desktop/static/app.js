@@ -167,26 +167,32 @@ function renderHome() {
   const p = platformOf(SELECTED_PLATFORM);
   const meta = AGENT_META[SELECTED_PLATFORM] || { icon: "◆", color: "#9ca3af" };
   if (!p.skills.length) {
-    box.innerHTML = `<div class="prov-empty">该平台还没有通过 Tardigrade 安装的 skill<br>
+    box.innerHTML = `<div class="prov-empty">该平台还没有安装任何 skill<br>
       <span style="color:var(--muted-fg);font-size:12px">点右上角 <span style="color:var(--orange)">＋</span> 去「市场」搜索安装，或在「适配矩阵」应用已有 skill</span></div>`;
     return;
   }
-  // cc-switch 语义：当前启用的供应商高亮 emerald → 对应最近安装且仍在位的 skill
-  const times = p.skills.filter((s) => s.present).map((s) => s.installed_at || "");
-  const latest = times.length ? Math.max(...times) : null;
+  // cc-switch 语义：当前启用的供应商高亮 emerald → 对应最近安装且仍在位的 Tardigrade 管理 skill
+  const managedTimes = p.skills.filter((s) => s.managed && s.present).map((s) => s.installed_at || "");
+  const latest = managedTimes.length ? Math.max(...managedTimes) : null;
 
   box.innerHTML = p.skills
     .map((s) => {
-      const pill = s.present
-        ? String(s.source || "").startsWith("http")
-          ? '<span class="prov-pill pill-repo">仓库安装</span>'
-          : '<span class="prov-pill pill-matrix">矩阵应用</span>'
-        : '<span class="prov-pill pill-missing">缺失</span>';
+      let pill;
+      if (!s.present) pill = '<span class="prov-pill pill-missing">缺失</span>';
+      else if (!s.managed) pill = '<span class="prov-pill pill-matrix">本机已有</span>';
+      else if (String(s.source || "").startsWith("http")) pill = '<span class="prov-pill pill-repo">仓库安装</span>';
+      else if (s.source) pill = '<span class="prov-pill pill-repo">本地导入</span>';
+      else pill = '<span class="prov-pill pill-matrix">矩阵应用</span>';
       const when = s.installed_at ? s.installed_at.slice(0, 10) : "";
-      const status = s.present
-        ? `<span class="prov-when">⏱ ${when}</span><span class="prov-ok">✓ 在位</span>`
-        : `<span class="prov-err">ⓘ 安装目录不存在</span>`;
-      const state = !s.present ? "state-missing" : (latest && s.installed_at === latest ? "state-current" : "");
+      const status = !s.present
+        ? `<span class="prov-err">ⓘ 安装目录不存在</span>`
+        : s.managed
+          ? `<span class="prov-when">⏱ ${when}</span><span class="prov-ok">✓ 在位</span>`
+          : `<span class="prov-when">检测于本机</span>`;
+      const state = s.managed && s.present && latest && s.installed_at === latest ? "state-current" : (!s.present ? "state-missing" : "");
+      const uninstallBtn = s.managed
+        ? `<button class="prov-uninstall" onclick="uninstallSkill('${s.skill}', '${SELECTED_PLATFORM}')">卸载</button>`
+        : "";
       return `<div class="prov-card ${state}">
         <span class="prov-grip">⠿</span>
         <div class="prov-avatar" style="color:${meta.color}">${meta.icon}</div>
@@ -194,9 +200,7 @@ function renderHome() {
           <div class="prov-title-row"><span class="prov-name">${s.skill}</span>${pill}</div>
           <div class="prov-path" title="${s.dest}">${s.dest}</div>
         </div>
-        <div class="prov-status">${status}
-          <button class="prov-uninstall" onclick="uninstallSkill('${s.skill}', '${SELECTED_PLATFORM}')">卸载</button>
-        </div>
+        <div class="prov-status">${status}${uninstallBtn}</div>
       </div>`;
     })
     .join("");
@@ -545,7 +549,7 @@ $("#btn-search").addEventListener("click", async () => {
   const btn = $("#btn-search");
   btn.disabled = true; btn.textContent = "搜索并审计中…";
   const box = $("#discover-results");
-  box.innerHTML = '<div class="loading">正在搜索并逐仓审计（每仓浅拉取 + 静态安全门）…</div>';
+  box.innerHTML = '<div class="loading">正在搜索并审计（GitHub + skills.sh 双源，并行审计前 5 仓，约需 10–40 秒）…</div>';
   try {
     const data = await api("/api/search", { query: q, limit: 5 });
     const msg = $("#discover-message");
@@ -560,6 +564,27 @@ $("#btn-search").addEventListener("click", async () => {
     box.innerHTML = `<div class="loading">搜索失败：${e.message}</div>`;
   } finally {
     btn.disabled = false; btn.textContent = "搜索并审计";
+  }
+});
+
+/* ---------------- import local skill ---------------- */
+$("#btn-import").addEventListener("click", async () => {
+  const p = $("#import-path").value.trim();
+  if (!p) return toast("请先填写本地 skill 目录路径");
+  const agent = $("#discover-agent").value;
+  const btn = $("#btn-import");
+  btn.disabled = true; btn.textContent = "审计中…";
+  const box = $("#discover-message");
+  try {
+    const r = await api("/api/import", { path: p, agent });
+    box.textContent = `✓ 审计${r.audit.badge === "pass" ? "通过" : "有发现（" + r.audit.detail + "）"}：已导入 ${r.skill} → ${agent}，安装到 ${r.dest}`;
+    box.classList.remove("hidden");
+    toast(`已导入：${r.skill} → ${agent}`);
+  } catch (e) {
+    box.textContent = `导入失败：${e.message}`;
+    box.classList.remove("hidden");
+  } finally {
+    btn.disabled = false; btn.textContent = "审计并导入到所选平台";
   }
 });
 

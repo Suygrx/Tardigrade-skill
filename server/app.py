@@ -20,6 +20,19 @@ from tardigrade_skill.audit import run_audit
 from tardigrade_skill.dispatcher import DispatchError, dispatch
 from tardigrade_skill.installer import find_skill_dirs as scan_skill_dirs
 from tardigrade_skill.installer import resolve_source, SourceError
+
+
+# Request bodies must live at module level: app.py uses `from __future__ import
+# annotations`, and FastAPI resolves string annotations against module globals —
+# a nested class would make the body param degrade to a query param (422).
+class UninstallBody(BaseModel):
+    skill: str
+    agent: str
+
+
+class ImportBody(BaseModel):
+    path: str
+    agent: str
 from tardigrade_skill.ir import SkillIR, build_ir
 from tardigrade_skill.lockfile import LockFile, build_entry
 from tardigrade_skill.profiles import default_profiles_dir, load_profiles
@@ -73,9 +86,9 @@ class InstallBody(BaseModel):
     agent: str
 
 
-class UninstallBody(BaseModel):
-    skill: str
-    agent: str
+    class ImportBody(BaseModel):
+        path: str
+        agent: str
 
 
 def _find_demo_roots() -> list[Path]:
@@ -317,26 +330,86 @@ def create_app() -> FastAPI:
 
     @app.get("/api/installed")
     def installed() -> dict:
-        """Per-platform listing of skills installed via Tardigrade (CC Switch home).
+        """Per-platform listing of skills (CC Switch home).
 
-        `detected` = the platform's config dir exists on this machine, so the
-        UI can show only platforms the user actually has (cc-switch behavior).
+        Each platform merges two sources:
+        - managed: installs recorded by Tardigrade (uninstallable)
+        - external: SKILL.md dirs already present in the platform's own
+          skills directory, installed outside Tardigrade (shown, not
+          uninstallable — we don't touch what we didn't install)
+        `detected` = the platform's config dir exists on this machine.
         """
-        from tardigrade_skill.dispatcher import detect_platforms
+        from tardigrade_skill.dispatcher import detect_platforms, target_dir
 
         detected = detect_platforms()
         all_installs = adapt_llm.list_installs()
         out = []
         for p in profiles.values():
             items = []
+            managed_dests: set[str] = set()
             for rec in all_installs:
                 if rec["agent"] != p.id:
                     continue
                 dest = Path(rec["dest"])
                 present = dest.is_dir()
-                items.append({**rec, "present": present})
+                if present:
+                    managed_dests.add(str(dest.resolve()).lower())
+                items.append({**rec, "present": present, "managed": True})
+            # scan the platform's own skills dir for skills installed outside Tardigrade
+            try:
+                base = target_dir(p.id, project=False)
+            except DispatchError:
+                base = None
+            if base and base.is_dir():
+                for child in sorted(base.iterdir()):
+                    if not child.is_dir() or not (child / "SKILL.md").is_file():
+                        continue
+                    if str(child.resolve()).lower() in managed_dests:
+                        continue
+                    items.append(
+                        {
+                            "skill": child.name,
+                            "agent": p.id,
+                            "dest": str(child),
+                            "source": "",
+                            "installed_at": None,
+                            "present": True,
+                            "managed": False,
+                        }
+                    )
             out.append({"agent": p.id, "name": p.name, "discovery": p.discovery, "detected": detected.get(p.id, False), "skills": items})
         return {"platforms": out}
+
+    @app.post("/api/import")
+    def import_local(body: ImportBody) -> dict:
+        """Import a local skill directory into a platform (audit gate -> install -> record)."""
+        if body.agent not in profiles:
+            raise HTTPException(400, f"unknown agent '{body.agent}'")
+        src = Path(body.path).expanduser()
+        if not src.is_dir():
+            raise HTTPException(404, f"目录不存在：{src}")
+        if not (src / "SKILL.md").is_file():
+            raise HTTPException(400, "该目录没有 SKILL.md，不是有效的 skill")
+        report = run_audit(src)
+        counts = {s: sum(1 for f in report.findings if f.severity == s) for s in ("CRITICAL", "HIGH", "LOW")}
+        badge_out = {"badge": "pass", "detail": "no findings"}
+        if counts["CRITICAL"]:
+            badge_out = {"badge": "blocked", "detail": f"CRITICAL={counts['CRITICAL']}"}
+        elif counts["HIGH"] or counts["LOW"]:
+            badge_out = {"badge": "findings", "detail": f"HIGH={counts['HIGH']} LOW={counts['LOW']}"}
+        if badge_out["badge"] == "blocked":
+            raise HTTPException(400, f"安全审计拦截（{badge_out['detail']}），已拒绝导入")
+        try:
+            dest = dispatch(src, body.agent)
+        except DispatchError as e:
+            raise HTTPException(400, str(e))
+        adapt_llm.record_install(src.name, body.agent, dest, source=str(src))
+        return {
+            "ok": True,
+            "skill": src.name,
+            "dest": str(dest),
+            "audit": badge_out,
+        }
 
     @app.post("/api/uninstall")
     def uninstall(body: UninstallBody) -> dict:
