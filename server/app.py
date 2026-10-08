@@ -97,7 +97,7 @@ def _static_dir() -> Path:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="tardigrade-skill desktop", version=__version__)
+    app = FastAPI(title="Tardigrade-skill desktop", version=__version__)
     profiles = load_profiles(default_profiles_dir())
     state = {"roots": [str(p) for p in _find_demo_roots()], "lock_root": Path(__file__).resolve().parents[1]}
 

@@ -31,7 +31,20 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
+def _ensure_stdio() -> None:
+    """PyInstaller --windowed builds have no console: sys.stdout/stderr are
+    None, and uvicorn's ColourizedFormatter calls .isatty() on them during
+    logging setup -> ValueError. Point them at the null device first."""
+    import sys
+
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
+
+
 def main() -> None:
+    _ensure_stdio()
     port = _free_port()
     app = create_app()
     config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")

@@ -1,4 +1,4 @@
-# tardigrade-skill
+# Tardigrade-skill
 
 Desktop manager + adaptation engine for **Agent Skills** (the [agentskills.io](https://agentskills.io) format).
 
