@@ -101,6 +101,14 @@ class ToggleBody(BaseModel):
     agent: str
 
 
+class LibraryDeleteBody(BaseModel):
+    name: str
+
+
+class OpenUrlBody(BaseModel):
+    url: str
+
+
 class SkillDetailBody(BaseModel):
     path: str
 
@@ -507,6 +515,32 @@ def create_app() -> FastAPI:
                     item["description"] = problems[0]
                 skills.append(item)
         return {"dir": str(lib), "skills": skills}
+
+    @app.post("/api/library/delete")
+    def library_delete(body: LibraryDeleteBody) -> dict:
+        """从本地 Skill 库删除一个 skill（仅允许删 download_dir 内的目录）。"""
+        lib = Path(state["download_dir"]).expanduser().resolve()
+        target = (lib / body.name).resolve()
+        if lib not in target.parents or target == lib:
+            raise HTTPException(400, "只能删除本地 Skill 库内的目录")
+        if not target.is_dir():
+            return {"ok": False, "message": f"目录不存在：{target}"}
+        shutil.rmtree(target)
+        meta = _load_library_meta()
+        if body.name in meta:
+            meta.pop(body.name)
+            _save_library_meta(meta)
+        return {"ok": True, "removed": str(target)}
+
+    @app.post("/api/open-url")
+    def open_url(body: OpenUrlBody) -> dict:
+        """用系统默认浏览器打开外部链接（exe 的 webview 里没有可用的 window.open）。"""
+        import webbrowser
+
+        if not body.url.startswith(("http://", "https://")):
+            raise HTTPException(400, "只允许 http/https 链接")
+        webbrowser.open(body.url)
+        return {"ok": True}
 
     @app.post("/api/toggle")
     def toggle(body: ToggleBody) -> dict:

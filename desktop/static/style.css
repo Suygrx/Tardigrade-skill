@@ -488,3 +488,103 @@ table.changelog { width: 100%; border-collapse: collapse; font-size: 12px; margi
 }
 .confirm-text { font-size: 14px; line-height: 1.6; color: var(--fg); margin: 0 0 16px; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ============================================================
+   平台真实 logo（static/logos/*.svg，透明背景）
+   ============================================================ */
+.plat-logo { width: 16px; height: 16px; display: inline-block; flex-shrink: 0; object-fit: contain; }
+.plat-logo-sm { width: 14px; height: 14px; }
+.plat-logo.logo-missing { visibility: hidden; width: 16px; }
+.as-btn .plat-logo { width: 17px; height: 17px; }
+.prov-avatar .plat-logo { width: 21px; height: 21px; }
+.plat-toggle .plat-logo { width: 17px; height: 17px; }
+.plat-toggle.on .plat-logo { transform: scale(1.06); }
+.mg-chip .plat-logo { width: 14px; height: 14px; }
+.th-plat { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+/* 首页 skill 名点击查看详情 */
+.prov-name-link { cursor: pointer; }
+.prov-name-link:hover { color: var(--primary); text-decoration: underline; }
+
+/* ============================================================
+   设置卡片加宽（与主区域对齐）
+   ============================================================ */
+.settings-box { max-width: 100%; width: 100%; }
+
+/* ============================================================
+   适配性测试（原适配矩阵）：横向滚动 + tier 彩点徽章
+   ============================================================ */
+.matrix-scroll { overflow-x: auto; padding-bottom: 6px; }
+.matrix-scroll::-webkit-scrollbar { height: 8px; }
+.matrix-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+.matrix-scroll::-webkit-scrollbar-track { background: transparent; }
+.matrix-card { min-width: max-content; }
+table.matrix { min-width: max-content; }
+table.matrix th { white-space: nowrap; }
+table.matrix td.skill-name .dir { max-width: 260px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
+
+/* tier 徽章：彩点 + 文字（替代 ✓/⚠/¶/✗ 字符图标） */
+.badge::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%;
+  background: currentColor; display: inline-block; margin-right: 6px; flex-shrink: 0;
+}
+.badge-pass::before, .badge-findings::before, .badge-skipped::before { display: inline-block; }
+.badge-pass::before { background: currentColor; }
+
+/* ============================================================
+   管理页删除按钮
+   ============================================================ */
+.mg-del {
+  width: 30px; height: 30px; border-radius: var(--radius-sm); cursor: pointer;
+  border: 1px solid transparent; background: transparent; color: var(--muted-fg);
+  font-size: 13px; transition: all 0.15s; flex-shrink: 0;
+}
+.mg-del:hover { border-color: var(--incompatible); color: var(--incompatible); background: var(--incompatible-bg); }
+
+/* ============================================================
+   市场卡片：名称跳转开源地址
+   ============================================================ */
+.mkt-link { cursor: pointer; display: inline-flex; align-items: center; gap: 4px; width: fit-content; max-width: 100%; }
+.mkt-link:hover { color: var(--primary); text-decoration: underline; }
+.mkt-ext { font-size: 11px; opacity: 0.55; }
+.mkt-link:hover .mkt-ext { opacity: 1; }
+
+/* ============================================================
+   SKILL.md 详情渲染（抽屉内 markdown 样式）
+   ============================================================ */
+.md-doc { font-size: 13.5px; line-height: 1.7; color: var(--fg); }
+.md-doc .md-title { font-size: 18px; font-weight: 700; margin: 0 0 10px; }
+.md-frontmatter {
+  display: flex; flex-direction: column; gap: 4px;
+  background: var(--muted); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; margin: 0 0 14px;
+}
+.md-fm-row { display: flex; gap: 10px; font-size: 12px; }
+.md-fm-k { color: var(--teal); font-weight: 600; min-width: 80px; }
+.md-fm-v { color: var(--muted-fg); }
+.md-doc h1.md-h, .md-doc h2.md-h { font-size: 17px; font-weight: 700; margin: 18px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.md-doc h3.md-h { font-size: 15px; font-weight: 600; margin: 16px 0 6px; color: var(--fg); }
+.md-doc h4.md-h, .md-doc h5.md-h, .md-doc h6.md-h { font-size: 13.5px; font-weight: 600; margin: 14px 0 5px; color: var(--muted-fg); }
+.md-p { margin: 0 0 8px; }
+.md-gap { height: 8px; }
+.md-doc .md-list { margin: 4px 0 10px; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
+.md-doc .md-list li::marker { color: var(--primary); }
+.md-code {
+  background: #131316; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 14px; margin: 8px 0 12px; overflow-x: auto;
+  font-family: Consolas, "Courier New", monospace; font-size: 12px; line-height: 1.55;
+}
+.md-code code { background: transparent; padding: 0; color: #d6d6dd; white-space: pre; }
+.md-code[data-lang]::before {
+  content: attr(data-lang); display: block; font-size: 10px; color: var(--muted-fg);
+  text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;
+}
+.md-inline { background: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-family: Consolas, monospace; font-size: 11.5px; color: var(--teal); }
+.md-link { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.md-link:hover { color: var(--fg); }
+.md-quote { border-left: 3px solid var(--primary); background: rgba(21, 131, 248, 0.06); margin: 8px 0; padding: 8px 12px; color: var(--muted-fg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.md-hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+.md-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 8px 0 12px; }
+.md-table th { background: var(--muted); color: var(--fg); font-weight: 600; text-align: left; }
+.md-table th, .md-table td { border: 1px solid var(--border); padding: 6px 10px; }
+.md-table tr:nth-child(even) td { background: rgba(255, 255, 255, 0.02); }

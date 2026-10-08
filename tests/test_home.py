@@ -131,3 +131,23 @@ def test_import_local_skill(tmp_path: Path, isolated_store) -> None:
         assert r.status_code == 400 and "拦截" in r.json()["detail"]
     finally:
         monkey.undo()
+
+
+def test_library_delete_and_open_url(tmp_path: Path, isolated_store) -> None:
+    c = _client()
+    c.post("/api/settings", json={"roots": [], "download_dir": str(tmp_path / "lib")})
+
+    r = c.post("/api/import", json={"path": str(REPO / "demo" / "skills" / "pdf-helper")})
+    assert r.status_code == 200
+    assert any(s["name"] == "pdf-helper" for s in c.get("/api/library").json()["skills"])
+
+    # delete refuses paths outside the library
+    assert c.post("/api/library/delete", json={"name": "../../etc"}).status_code == 400
+    assert c.post("/api/library/delete", json={"name": "nope"}).json()["ok"] is False
+
+    r = c.post("/api/library/delete", json={"name": "pdf-helper"})
+    assert r.status_code == 200 and r.json()["ok"] is True
+    assert not any(s["name"] == "pdf-helper" for s in c.get("/api/library").json()["skills"])
+
+    # open-url only allows http/https
+    assert c.post("/api/open-url", json={"url": "file:///C:/Windows"}).status_code == 400

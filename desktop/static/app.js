@@ -10,11 +10,11 @@ let SELECTED_PLATFORM = localStorage.getItem("tardigrade.platform") || "claude-c
 const MANAGE = { rows: [], platforms: [], filter: null, q: "" };
 
 const TIER_LABEL = {
-  "full": ["✓ 一键用", "tier-full"],
-  "full*": ["✓* 可用需确认", "tier-full-star"],
-  "adapted": ["⚠ 需适配确认", "tier-adapted"],
-  "partial": ["¶ 手动步骤", "tier-partial"],
-  "incompatible": ["✗ 不兼容", "tier-incompatible"],
+  "full": ["一键可用", "tier-full"],
+  "full*": ["可用需确认", "tier-full-star"],
+  "adapted": ["需适配", "tier-adapted"],
+  "partial": ["手动步骤", "tier-partial"],
+  "incompatible": ["不兼容", "tier-incompatible"],
 };
 
 const VIEW_TITLES = { home: "", manage: "Skills 管理", discover: "市场" };
@@ -40,6 +40,18 @@ function toast(msg, ms = 2600) {
   el._t = setTimeout(() => el.classList.add("hidden"), ms);
 }
 
+/* 外部浏览器打开（exe 里没有 window.open 可用的目标窗口） */
+async function openExternal(url) {
+  if (!/^https?:\/\//.test(url)) return;
+  try { await api("/api/open-url", { url }); } catch (e) { toast(`打开失败：${e.message}`); }
+}
+
+/* markdown 里渲染出来的链接全部走外部浏览器（事件委托） */
+document.addEventListener("click", (e) => {
+  const a = e.target.closest(".md-link");
+  if (a) { e.preventDefault(); openExternal(a.dataset.url); }
+});
+
 /* 通用确认弹窗（pywebview 里没有原生 confirm） */
 function ask(text) {
   return new Promise((resolve) => {
@@ -63,20 +75,84 @@ function ask(text) {
 /* 极简 markdown 渲染（标题/列表/粗体/行内代码/代码块） */
 function renderMd(src) {
   const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  let inCode = false;
-  const lines = esc(src).split("\n").map((line) => {
-    if (/^```/.test(line)) { inCode = !inCode; return inCode ? '<pre class="md-code">' : "</pre>"; }
-    if (inCode) return line;
-    if (/^###\s/.test(line)) return `<h4>${line.slice(4)}</h4>`;
-    if (/^##\s/.test(line)) return `<h3>${line.slice(3)}</h3>`;
-    if (/^#\s/.test(line)) return `<h2>${line.slice(2)}</h2>`;
-    if (/^[-*]\s/.test(line)) return `<div class="md-li">• ${line.slice(2)}</div>`;
-    if (!line.trim()) return '<div class="md-gap"></div>';
-    return `<p>${line}</p>`;
-  }).join("");
-  return lines
-    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
-    .replace(/`([^`]+)`/g, '<code class="md-inline">$1</code>');
+  // inline: code / bold / italic / strikethrough / link
+  const inline = (s) =>
+    esc(s)
+      .replace(/`([^`]+)`/g, '<code class="md-inline">$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+      .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<i>$2</i>")
+      .replace(/~~([^~]+)~~/g, "<s>$1</s>")
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a class="md-link" href="#" data-url="$2" title="$2">$1</a>');
+
+  const lines = src.split("\n");
+  const out = [];
+  let i = 0;
+  // YAML frontmatter -> 渲染为头部元信息
+  if (lines[0] && /^---\s*$/.test(lines[0])) {
+    const fm = [];
+    for (i = 1; i < lines.length && !/^---\s*$/.test(lines[i]); i++) fm.push(lines[i]);
+    i++; // skip closing ---
+    if (fm.length) {
+      out.push('<div class="md-frontmatter">');
+      for (const l of fm) {
+        const m = l.match(/^(\w[\w-]*):\s*(.*)$/);
+        if (m) out.push(`<div class="md-fm-row"><span class="md-fm-k">${esc(m[1])}</span><span class="md-fm-v">${inline(m[2].replace(/^["']|["']$/g, ""))}</span></div>`);
+      }
+      out.push("</div>");
+    }
+  }
+
+  let inCode = false, codeLang = "", codeBuf = [], listStack = [];
+  const closeLists = () => { while (listStack.length) out.push(listStack.pop() === "ol" ? "</ol>" : "</ul>"); };
+  for (; i < lines.length; i++) {
+    const line = lines[i];
+    const fence = line.match(/^```\s*(\S*)/);
+    if (fence) {
+      if (!inCode) { inCode = true; codeLang = fence[1] || ""; codeBuf = []; }
+      else { out.push(`<pre class="md-code"${codeLang ? ` data-lang="${esc(codeLang)}"` : ""}><code>${esc(codeBuf.join("\n"))}</code></pre>`); inCode = false; }
+      continue;
+    }
+    if (inCode) { codeBuf.push(line); continue; }
+    if (/^<\/pre>$/.test(line)) continue;
+
+    const hm = line.match(/^(#{1,6})\s+(.*)$/);
+    if (hm) { closeLists(); out.push(`<h${hm[1].length + 1} class="md-h">${inline(hm[2])}</h${hm[1].length + 1}>`); continue; }
+    if (/^\s*([-*_])\s*\1\s*\1[\s\1]*$/.test(line)) { closeLists(); out.push('<hr class="md-hr">'); continue; }
+    const qm = line.match(/^\s*>\s?(.*)$/);
+    if (qm) { closeLists(); out.push(`<blockquote class="md-quote">${inline(qm[1])}</blockquote>`); continue; }
+
+    const um = line.match(/^(\s*)[-*+]\s+(.*)$/);
+    const om = line.match(/^(\s*)\d+[.)]\s+(.*)$/);
+    if (um || om) {
+      const type = um ? "ul" : "ol";
+      const depth = Math.min(2, Math.floor((um || om)[1].replace(/\t/g, "  ").length / 2));
+      while (listStack.length > depth) out.push(listStack.pop() === "ol" ? "</ol>" : "</ul>");
+      while (listStack.length <= depth) { out.push(`<${type} class="md-list">`); listStack.push(type); }
+      const cur = listStack[listStack.length - 1];
+      if (cur !== type) { out.push(listStack.pop() === "ol" ? "</ol>" : "</ul>"); out.push(`<${type} class="md-list">`); listStack.push(type); }
+      out.push(`<li>${inline((um || om)[2])}</li>`);
+      continue;
+    }
+    // table: | a | b |
+    if (/^\s*\|.*\|\s*$/.test(line) && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1] || "")) {
+      closeLists();
+      const cells = (l) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+      const head = cells(line);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { rows.push(cells(lines[i])); i++; }
+      i--;
+      out.push('<table class="md-table"><thead><tr>' + head.map((h) => `<th>${inline(h)}</th>`).join("") + "</tr></thead><tbody>" +
+        rows.map((r) => "<tr>" + r.map((c) => `<td>${inline(c)}</td>`).join("") + "</tr>").join("") + "</tbody></table>");
+      continue;
+    }
+    if (!line.trim()) { closeLists(); out.push('<div class="md-gap"></div>'); continue; }
+    closeLists();
+    out.push(`<p class="md-p">${inline(line)}</p>`);
+  }
+  if (inCode) out.push(`<pre class="md-code"><code>${esc(codeBuf.join("\n"))}</code></pre>`);
+  closeLists();
+  return out.join("");
 }
 
 /* ---------------- navigation (topbar) ---------------- */
@@ -105,26 +181,36 @@ function switchView(name) { setView(name); }
 
 /* ---------------- home (platform cards) ---------------- */
 const AGENT_META = {
-  "claude-code": { icon: "◈", color: "#d97757", short: "Claude" },
-  "codex": { icon: "◉", color: "#10a37f", short: "Codex" },
-  "gemini-cli": { icon: "✦", color: "#4285f4", short: "Gemini" },
-  "cursor": { icon: "▣", color: "#9ca3af", short: "Cursor" },
-  "opencode": { icon: "⌘", color: "#a78bfa", short: "OpenCode" },
-  "github-copilot": { icon: "◍", color: "#7cb8f8", short: "Copilot" },
-  "windsurf": { icon: "≋", color: "#2dd4bf", short: "Windsurf" },
-  "qwen-code": { icon: "✧", color: "#a78bfa", short: "Qwen" },
-  "iflow-cli": { icon: "❋", color: "#f97316", short: "iFlow" },
-  "crush": { icon: "▚", color: "#f472b6", short: "Crush" },
-  "goose": { icon: "◔", color: "#fbbf24", short: "Goose" },
-  "droid": { icon: "◇", color: "#9ca3af", short: "Droid" },
-  "amp": { icon: "⌁", color: "#e5e7eb", short: "Amp" },
-  "cline": { icon: "⬡", color: "#60a5fa", short: "Cline" },
-  "roo": { icon: "▲", color: "#f87171", short: "Roo" },
-  "kilo": { icon: "◆", color: "#34d399", short: "Kilo" },
-  "trae": { icon: "▣", color: "#ef4444", short: "Trae" },
-  "trae-cn": { icon: "▣", color: "#dc2626", short: "Trae CN" },
-  "workbuddy": { icon: "❖", color: "#34d399", short: "WorkBuddy" },
+  "claude-code": { color: "#d97757", short: "Claude" },
+  "codex": { color: "#10a37f", short: "Codex" },
+  "gemini-cli": { color: "#4285f4", short: "Gemini" },
+  "cursor": { color: "#9ca3af", short: "Cursor" },
+  "opencode": { color: "#a78bfa", short: "OpenCode" },
+  "github-copilot": { color: "#7cb8f8", short: "Copilot" },
+  "windsurf": { color: "#2dd4bf", short: "Windsurf" },
+  "qwen-code": { color: "#a78bfa", short: "Qwen" },
+  "iflow-cli": { color: "#f97316", short: "iFlow" },
+  "crush": { color: "#f472b6", short: "Crush" },
+  "goose": { color: "#fbbf24", short: "Goose" },
+  "droid": { color: "#9ca3af", short: "Droid" },
+  "amp": { color: "#e5e7eb", short: "Amp" },
+  "cline": { color: "#60a5fa", short: "Cline" },
+  "roo": { color: "#f87171", short: "Roo" },
+  "kilo": { color: "#34d399", short: "Kilo" },
+  "trae": { color: "#ef4444", short: "Trae" },
+  "trae-cn": { color: "#dc2626", short: "Trae CN" },
+  "workbuddy": { color: "#34d399", short: "WorkBuddy" },
 };
+
+function metaOf(agent, fallbackName) {
+  return AGENT_META[agent] || { color: "#9ca3af", short: fallbackName || agent };
+}
+
+/* 平台 logo（static/logos/<agent>.svg，透明背景；缺失时 img 回退隐藏由 CSS 兜底） */
+function logoImg(agent, cls = "") {
+  const short = metaOf(agent).short;
+  return `<img class="plat-logo ${cls}" src="logos/${agent}.svg" alt="${short}" title="${short}" onerror="this.classList.add('logo-missing')">`;
+}
 
 function visiblePlatforms() {
   const detected = INSTALLED.platforms.filter((p) => p.detected);
@@ -144,9 +230,9 @@ function renderPlatformPill() {
   const pill = $("#platform-pill");
   pill.innerHTML = visiblePlatforms()
     .map((p) => {
-      const meta = AGENT_META[p.agent] || { icon: "◆", color: "#9ca3af", short: p.name };
+      const meta = metaOf(p.agent, p.name);
       return `<button class="as-btn ${p.agent === SELECTED_PLATFORM ? "active" : ""}" data-platform="${p.agent}" title="${p.name}">
-        <span class="as-glyph" style="color:${meta.color}">${meta.icon}</span>${meta.short}
+        ${logoImg(p.agent)}${meta.short}
       </button>`;
     })
     .join("");
@@ -190,7 +276,7 @@ function populateAgentSelect() {
 function renderHome() {
   const box = $("#home-list");
   const p = platformOf(SELECTED_PLATFORM);
-  const meta = AGENT_META[SELECTED_PLATFORM] || { icon: "◆", color: "#9ca3af" };
+  const meta = metaOf(SELECTED_PLATFORM);
   if (!p.skills.length) {
     box.innerHTML = `<div class="prov-empty">该平台还没有安装任何 skill<br>
       <span style="color:var(--muted-fg);font-size:12px">点右上角 <span style="color:var(--orange)">＋</span> 去「市场」搜索安装，或在「Skills 管理」导入本地 skill</span></div>`;
@@ -219,15 +305,18 @@ function renderHome() {
         : "";
       return `<div class="prov-card ${state}">
         <span class="prov-grip">⠿</span>
-        <div class="prov-avatar" style="color:${meta.color}">${meta.icon}</div>
+        <div class="prov-avatar">${logoImg(SELECTED_PLATFORM)}</div>
         <div class="prov-main">
-          <div class="prov-title-row"><span class="prov-name">${s.skill}</span>${pill}</div>
+          <div class="prov-title-row"><span class="prov-name prov-name-link" data-dir="${s.dest}" title="查看 SKILL.md">${s.skill}</span>${pill}</div>
           <div class="prov-path" title="${s.dest}">${s.dest}</div>
         </div>
         <div class="prov-status">${status}${uninstallBtn}</div>
       </div>`;
     })
     .join("");
+  box.querySelectorAll(".prov-name-link").forEach((n) =>
+    n.addEventListener("click", () => showSkillMd(n.dataset.dir))
+  );
 }
 
 async function uninstallSkill(skill, agent) {
@@ -319,9 +408,9 @@ function renderManage() {
     `<button class="mg-chip ${MANAGE.filter === null ? "active" : ""}" data-p="">全部 <span>${MANAGE.rows.length}</span></button>` +
     MANAGE.platforms
       .map((p) => {
-        const meta = AGENT_META[p.agent] || { icon: "◆", color: "#9ca3af", short: p.name };
+        const meta = metaOf(p.agent, p.name);
         return `<button class="mg-chip ${MANAGE.filter === p.agent ? "active" : ""}" data-p="${p.agent}">
-          <span style="color:${meta.color}">${meta.icon}</span> ${meta.short} <span>${counts[p.agent] || 0}</span>
+          ${logoImg(p.agent, "plat-logo-sm")} ${meta.short} <span>${counts[p.agent] || 0}</span>
         </button>`;
       })
       .join("");
@@ -340,12 +429,12 @@ function renderManage() {
     ? `<div class="mg-rows">` + rows.map((r) => {
         const icons = MANAGE.platforms
           .map((p) => {
-            const meta = AGENT_META[p.agent] || { icon: "◆", color: "#9ca3af", short: p.name };
+            const meta = metaOf(p.agent, p.name);
             const on = !!r.enabled[p.agent];
             const ext = !!(r.externalEnabled && r.externalEnabled[p.agent]);
             return `<button class="plat-toggle ${on ? "on" : ""}" data-skill="${r.name}" data-agent="${p.agent}"
               title="${meta.short}${on ? "：已开启" : "：未开启"}${ext ? "（本机已有，非 Tardigrade 管理）" : ""}"
-              style="--pc:${meta.color}">${meta.icon}</button>`;
+              style="--pc:${meta.color}">${logoImg(p.agent)}</button>`;
           })
           .join("");
         return `<div class="mg-row">
@@ -354,7 +443,7 @@ function renderManage() {
               <span class="prov-pill pill-matrix">${r.tag}</span></div>
             <div class="mg-desc">${(r.desc || "—").slice(0, 120)}</div>
           </div>
-          <div class="mg-icons">${icons}</div>
+          <div class="mg-icons">${icons}${r.tag === "库" ? `<button class="mg-del" data-skill="${r.name}" title="从本地 Skill 库删除">✕</button>` : ""}</div>
         </div>`;
       }).join("") + `</div>`
     : `<div class="prov-empty">没有匹配的 skill</div>`;
@@ -365,6 +454,18 @@ function renderManage() {
   $("#mg-list").querySelectorAll(".mg-name").forEach((n) =>
     n.addEventListener("click", () => showSkillMd(n.dataset.dir))
   );
+  $("#mg-list").querySelectorAll(".mg-del").forEach((b) =>
+    b.addEventListener("click", () => deleteLibrarySkill(b.dataset.skill))
+  );
+}
+
+async function deleteLibrarySkill(name) {
+  if (!(await ask(`从本地 Skill 库删除「${name}」？其目录将从下载库中移除（已安装到平台的不受影响，可稍后在各平台手动清理）。`))) return;
+  try {
+    const r = await api("/api/library/delete", { name });
+    toast(r.ok ? `已删除：${name}` : r.message || "删除失败");
+    loadManage();
+  } catch (e) { toast(`删除失败：${e.message}`); }
 }
 
 $("#mg-search").addEventListener("input", (e) => { MANAGE.q = e.target.value; renderManage(); });
@@ -372,7 +473,7 @@ $("#mg-search").addEventListener("input", (e) => { MANAGE.q = e.target.value; re
 async function togglePlatform(skill, agent) {
   const row = MANAGE.rows.find((r) => r.name === skill);
   if (!row) return;
-  const pname = (AGENT_META[agent] || {}).short || agent;
+  const pname = metaOf(agent).short;
   if (row.enabled[agent]) {
     if (row.externalEnabled && row.externalEnabled[agent]) return toast("本机已有的 skill，非 Tardigrade 管理，请在该平台手动处理");
     if (!(await ask(`确定在 ${pname} 上关闭（卸载）「${skill}」？`))) return;
@@ -441,10 +542,16 @@ function renderMatrix() {
     wrap.innerHTML = '<div class="placeholder">扫描目录中没有找到 skill（含 SKILL.md 的目录）。可在「设置」里添加扫描目录。</div>';
     return;
   }
-  const thead = MATRIX.platforms.map((p) => `<th>${p.name}</th>`).join("");
+  // 只显示本机实际识别到的平台（与顶栏/管理页一致；一个都没检出时回退全部）
+  const detectedAgents = new Set(visiblePlatforms().map((p) => p.agent));
+  const cols = MATRIX.platforms.filter((p) => detectedAgents.has(p.id));
+  const useCols = cols.length ? cols : MATRIX.platforms;
+  const thead = useCols
+    .map((p) => `<th><span class="th-plat">${logoImg(p.id, "plat-logo-sm")}${metaOf(p.id, p.name).short}</span></th>`)
+    .join("");
   const rows = MATRIX.rows
     .map((row) => {
-      const cells = MATRIX.platforms
+      const cells = useCols
         .map((p) => {
           const cell = row.cells.find((c) => c.agent === p.id);
           if (!cell) return "<td></td>";
@@ -455,7 +562,7 @@ function renderMatrix() {
       return `<tr class="${row.valid ? "" : "invalid"}"><td class="skill-name">${row.skill}<span class="dir" title="${row.dir}">${row.dir}</span></td>${cells}</tr>`;
     })
     .join("");
-  wrap.innerHTML = `<div class="matrix-card"><table class="matrix"><thead><tr><th class="skill-col">Skill</th>${thead}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  wrap.innerHTML = `<div class="matrix-scroll"><div class="matrix-card"><table class="matrix"><thead><tr><th class="skill-col">Skill</th>${thead}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
   wrap.querySelectorAll("td.cell").forEach((td) =>
     td.addEventListener("click", () => openDrawer(td.dataset.skill, td.dataset.agent))
   );
@@ -768,7 +875,7 @@ function renderDiscover(results, cached) {
     const installTargets = skills.length ? skills : [{ name: repo.full_name.split("/").pop(), summary: repo.description || "" }];
     for (const s of installTargets) {
       cards.push(`<div class="mkt-card">
-        <div class="mkt-name" title="${s.name}">${s.name}</div>
+        <div class="mkt-name mkt-link" data-url="${repo.html_url}" title="在浏览器打开 ${repo.full_name}">${s.name} <span class="mkt-ext">↗</span></div>
         <div class="mkt-repo" title="${repo.full_name}">${repo.full_name} ★${repo.stars ?? 0}${repo.installs ? ` · ⬇${repo.installs.toLocaleString()}` : ""}${cached ? " · (缓存)" : ""}</div>
         <div class="mkt-sum" title="${(s.summary || repo.description || "").replace(/"/g, "&quot;")}">${(s.summary || repo.description || "—").slice(0, 90)}</div>
         <div class="mkt-foot">
@@ -781,6 +888,9 @@ function renderDiscover(results, cached) {
   box.innerHTML = `<div class="mkt-grid">${cards.join("")}</div>`;
   box.querySelectorAll(".mkt-install").forEach((b) =>
     b.addEventListener("click", () => downloadToLibrary(b.dataset.source, b))
+  );
+  box.querySelectorAll(".mkt-link").forEach((n) =>
+    n.addEventListener("click", () => openExternal(n.dataset.url))
   );
 }
 
