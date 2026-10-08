@@ -324,7 +324,133 @@ async function loadSkills() {
   }
 }
 
-/* ---------------- settings ---------------- */
+/* ---------------- llm config (settings) ---------------- */
+$("#btn-llm-save").addEventListener("click", async () => {
+  const body = {
+    base_url: $("#llm-url").value.trim(),
+    api_key: $("#llm-key").value.trim(),
+    model: $("#llm-model").value.trim(),
+  };
+  if (!body.base_url || !body.api_key || !body.model) return toast("Base URL / API Key / 模型名都需要填写");
+  const btn = $("#btn-llm-save");
+  btn.disabled = true; btn.textContent = "保存并探测中…";
+  try {
+    const r = await api("/api/llm/config", body);
+    renderProbe(r);
+    ping();
+  } catch (e) {
+    renderProbe({ ok: false, message: e.message });
+  } finally {
+    btn.disabled = false; btn.textContent = "保存并自动识别";
+  }
+});
+
+$("#btn-llm-test").addEventListener("click", async () => {
+  const btn = $("#btn-llm-test");
+  btn.disabled = true;
+  try {
+    renderProbe(await api("/api/llm/test", {}));
+  } catch (e) {
+    renderProbe({ ok: false, message: e.message });
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function renderProbe(r) {
+  const el = $("#llm-probe");
+  el.classList.remove("hidden", "ok", "err");
+  el.classList.add(r.ok ? "ok" : "err");
+  let html = `${r.ok ? "✓" : "✗"} ${r.message || ""}`;
+  if (r.ok && Array.isArray(r.detected) && r.detected.length) {
+    html += "<br>" + r.detected
+      .slice(0, 30)
+      .map((m) => `<span class="model-chip ${m === $("#llm-model").value.trim() ? "exact" : ""}">${m}</span>`)
+      .join("");
+    if (r.detected.length > 30) html += ` …共 ${r.detected.length} 个`;
+  }
+  el.innerHTML = html;
+  if (r.ok) toast("模型配置已生效");
+}
+
+/* ---------------- discover (search = audit) ---------------- */
+$("#btn-search").addEventListener("click", async () => {
+  const q = $("#discover-input").value.trim();
+  if (!q) return toast("请输入关键词");
+  const btn = $("#btn-search");
+  btn.disabled = true; btn.textContent = "搜索并审计中…";
+  const box = $("#discover-results");
+  box.innerHTML = '<div class="loading">正在搜索并逐仓审计（每仓浅拉取 + 静态安全门）…</div>';
+  try {
+    const data = await api("/api/search", { query: q, limit: 5 });
+    const msg = $("#discover-message");
+    if (data.message) {
+      msg.textContent = data.message;
+      msg.classList.remove("hidden");
+    } else {
+      msg.classList.add("hidden");
+    }
+    renderDiscover(data.results, data.cached);
+  } catch (e) {
+    box.innerHTML = `<div class="loading">搜索失败：${e.message}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = "搜索并审计";
+  }
+});
+
+const AUDIT_BADGE = {
+  pass: ["✓ 审计通过", "badge-pass"],
+  findings: ["⚠ 有发现", "badge-findings"],
+  blocked: ["✗ 危险，已拦截", "badge-blocked"],
+  skipped: ["– 未分级", "badge-skipped"],
+};
+
+function renderDiscover(results, cached) {
+  const box = $("#discover-results");
+  if (!results.length) {
+    box.innerHTML = '<div class="placeholder">没有匹配结果。</div>';
+    return;
+  }
+  box.innerHTML = results
+    .map((r) => {
+      const [label, cls] = AUDIT_BADGE[r.audit.badge] || [r.audit.badge, ""];
+      const skills = (r.audit.skills || [])
+        .map((s) => {
+          const [sl, sc] = AUDIT_BADGE[s.badge] || [s.badge, ""];
+          return `<div>${s.name} <span class="badge ${sc}">${sl}</span> <span style="color:var(--text-dim)">${s.detail || ""} · ${s.summary || ""}</span></div>`;
+        })
+        .join("");
+      return `<div class="repo-card">
+        <div class="rc-head">
+          <h3><a href="${r.html_url}" target="_blank" rel="noopener">${r.full_name}</a> ★${r.stars}${cached ? " <span style='color:var(--text-dim);font-size:11px'>(缓存)</span>" : ""}</h3>
+          <span class="badge ${cls}">${label} ${r.audit.detail || ""}</span>
+        </div>
+        <div class="rc-meta">${r.description || ""}</div>
+        <div class="rc-skills">${skills || '<span style="color:var(--text-dim)">未找到 skill</span>'}</div>
+        <div class="pc-actions"><button class="btn btn-primary" onclick="installRepo('${r.html_url}')">安装到 ${"{{agent}}"}</button></div>
+      </div>`;
+    })
+    .join("");
+  box.querySelectorAll(".pc-actions .btn").forEach((b) => {
+    b.textContent = `安装到 ${$("#discover-agent").value}`;
+  });
+}
+
+async function installRepo(htmlUrl) {
+  const agent = $("#discover-agent").value;
+  const repoPath = htmlUrl.replace("https://github.com/", "");
+  try {
+    const r = await api("/api/install", { source: `https://github.com/${repoPath}.git`, agent });
+    const ok = r.results.filter((x) => x.ok).length;
+    const fail = r.results.length - ok;
+    toast(`安装完成：成功 ${ok}，失败 ${fail}${fail ? "（详见审计/适配判定）" : ""}`);
+    if (ok) loadMatrix();
+  } catch (e) {
+    toast(`安装失败：${e.message}`);
+  }
+}
+
+/* ---------------- settings (roots) ---------------- */
 async function loadSettings() {
   try {
     SETTINGS = await api("/api/settings");

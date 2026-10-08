@@ -196,3 +196,47 @@ table.changelog { width: 100%; border-collapse: collapse; font-size: 12px; margi
 .status-pending { color: var(--adapted); font-weight: 600; }
 .status-confirmed { color: var(--full); font-weight: 600; }
 .status-rejected, .status-failed, .status-partial { color: var(--incompatible); font-weight: 600; }
+
+/* ---------------- llm form + discover ---------------- */
+.llm-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.llm-form label { font-size: 12px; color: var(--text-dim); display: flex; flex-direction: column; gap: 4px; }
+.llm-form input {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 13px; font-family: inherit;
+}
+.llm-form .btn { align-self: flex-start; }
+.llm-form .btn + .btn { margin-left: 8px; }
+.llm-probe {
+  margin-top: 10px; font-size: 12px; padding: 10px; border-radius: 8px;
+  border: 1px dashed var(--border); line-height: 1.6; word-break: break-all;
+}
+.llm-probe.ok { border-color: var(--full); }
+.llm-probe.err { border-color: var(--incompatible); }
+.llm-probe .model-chip {
+  display: inline-block; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 999px; padding: 1px 8px; margin: 2px; font-size: 11px;
+}
+.llm-probe .model-chip.exact { border-color: var(--full); color: var(--full); font-weight: 600; }
+.search-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+.search-bar input {
+  flex: 1; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px;
+}
+.select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--panel); }
+.discover-message {
+  margin-bottom: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px;
+  background: var(--adapted-bg); color: var(--adapted);
+}
+.discover-message.hidden { display: none; }
+.repo-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 18px; margin-bottom: 12px;
+}
+.repo-card .rc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.repo-card .rc-head h3 { font-size: 14px; }
+.repo-card .rc-head h3 a { color: var(--accent); text-decoration: none; }
+.repo-card .rc-meta { font-size: 12px; color: var(--text-dim); margin: 4px 0 8px; }
+.repo-card .rc-skills { font-size: 12px; line-height: 1.8; }
+.badge.badge-pass { color: var(--full); background: var(--full-bg); }
+.badge.badge-findings { color: var(--adapted); background: var(--adapted-bg); }
+.badge.badge-blocked { color: var(--incompatible); background: var(--incompatible-bg); }
+.badge.badge-skipped { color: var(--partial); background: var(--partial-bg); }

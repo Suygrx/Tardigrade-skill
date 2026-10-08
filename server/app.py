@@ -13,11 +13,13 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from tardigrade_skill import adapt_llm
+from tardigrade_skill import discover
 from tardigrade_skill import llm as llm_module
 from tardigrade_skill.adapt import judge_skill
 from tardigrade_skill.audit import run_audit
 from tardigrade_skill.dispatcher import DispatchError, dispatch
 from tardigrade_skill.installer import find_skill_dirs as scan_skill_dirs
+from tardigrade_skill.installer import resolve_source, SourceError
 from tardigrade_skill.ir import SkillIR, build_ir
 from tardigrade_skill.lockfile import LockFile, build_entry
 from tardigrade_skill.profiles import default_profiles_dir, load_profiles
@@ -53,6 +55,22 @@ class AdaptBody(BaseModel):
 
 class AdaptationIdBody(BaseModel):
     id: str
+
+
+class LlmConfigBody(BaseModel):
+    base_url: str
+    api_key: str
+    model: str
+
+
+class SearchBody(BaseModel):
+    query: str
+    limit: int = 5
+
+
+class InstallBody(BaseModel):
+    source: str
+    agent: str
 
 
 def _find_demo_roots() -> list[Path]:
@@ -251,6 +269,77 @@ def create_app() -> FastAPI:
     @app.post("/api/adaptations/reject")
     def adaptations_reject(body: AdaptationIdBody) -> dict:
         return adapt_llm.reject_adaptation(body.id)
+
+    # ------------------------------------------------------------- LLM config (user-provided, auto-probed)
+
+    @app.post("/api/llm/config")
+    def llm_config(body: LlmConfigBody) -> dict:
+        """Save the user-provided endpoint/key/model, then auto-probe it."""
+        if not (body.base_url.strip() and body.api_key.strip() and body.model.strip()):
+            raise HTTPException(400, "base_url, api_key and model are all required")
+        cfg_path = llm_module.save_model_config(body.base_url, body.api_key, body.model)
+        cfg = llm_module.load_model_config(cfg_path)
+        probe = llm_module.test_connection(cfg)
+        return {"saved": True, "path": str(cfg_path), **probe}
+
+    @app.post("/api/llm/test")
+    def llm_test() -> dict:
+        cfg = llm_module.load_model_config()
+        if cfg is None:
+            raise HTTPException(400, "no model configured yet")
+        return llm_module.test_connection(cfg)
+
+    # ------------------------------------------------------------- discovery (search = audit)
+
+    @app.post("/api/search")
+    def search(body: SearchBody) -> dict:
+        return discover.search_skills(body.query, limit=max(1, min(body.limit, 10)))
+
+    @app.post("/api/install")
+    def install(body: InstallBody) -> dict:
+        """Full audited install pipeline for remote/local sources (discovery -> platform)."""
+        if body.agent not in profiles:
+            raise HTTPException(400, f"unknown agent '{body.agent}'")
+        import tempfile
+
+        with tempfile.TemporaryDirectory(prefix="tardigrade-install-") as tmp:
+            workdir = Path(tmp)
+            try:
+                root, source_desc, resolved_sha = resolve_source(body.source, workdir)
+            except SourceError as e:
+                raise HTTPException(400, f"source error: {e}")
+            skill_dirs = scan_skill_dirs(root)
+            if not skill_dirs:
+                raise HTTPException(400, "no skill directories found (no SKILL.md within 2 levels)")
+            profile = profiles[body.agent]
+            lock = LockFile.load(state["lock_root"])
+            results = []
+            for d in skill_dirs:
+                problems = validate_skill(d)
+                if problems:
+                    results.append({"skill": d.name, "ok": False, "message": problems[0]})
+                    continue
+                report = run_audit(d)
+                if report.blocked:
+                    results.append(
+                        {"skill": d.name, "ok": False, "message": f"blocked by audit gate: {report.summary()}", "audit": report.summary()}
+                    )
+                    continue
+                judgment = judge_skill(d, profile)
+                if judgment.tier not in {"full", "full*"}:
+                    results.append(
+                        {"skill": d.name, "ok": False, "message": f"tier is '{judgment.tier}'; run the L2 adaptation flow for this platform"}
+                    )
+                    continue
+                try:
+                    dest = dispatch(d, body.agent)
+                except DispatchError as e:
+                    results.append({"skill": d.name, "ok": False, "message": str(e)})
+                    continue
+                lock.record(build_entry(d.name, source_desc, d, resolved_sha=resolved_sha))
+                results.append({"skill": d.name, "ok": True, "tier": judgment.tier, "dest": str(dest)})
+            lock_path = lock.save(state["lock_root"])
+            return {"results": results, "lockfile": str(lock_path)}
 
     # ------------------------------------------------------------- static frontend
 
