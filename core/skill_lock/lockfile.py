@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import time
 import tomllib
 from dataclasses import dataclass, field
@@ -33,13 +34,15 @@ class LockEntry:
         # attach to the LAST [[skills]] entry and break with multiple skills.
         files_items = ", ".join(f'"{rel}" = "{digest}"' for rel, digest in sorted(self.files.items()))
         files_inline = "{ " + files_items + " }" if self.files else "{}"
+        # json.dumps produces TOML-compatible basic-string escaping (backslashes etc.)
+        esc = lambda s: json.dumps(s)
         lines = [
             "[[skills]]",
-            f'name = "{self.name}"',
-            f'source = "{self.source}"',
-            f'rev = "{self.rev}"',
-            f'resolved_sha = "{self.resolved_sha}"',
-            f'installed_at = "{self.installed_at}"',
+            f"name = {esc(self.name)}",
+            f"source = {esc(self.source)}",
+            f"rev = {esc(self.rev)}",
+            f"resolved_sha = {esc(self.resolved_sha)}",
+            f"installed_at = {esc(self.installed_at)}",
             f"files = {files_inline}",
         ]
         return "\n".join(lines) + "\n"

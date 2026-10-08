@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>skill-lock</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-logo">SL</div>
+      <div class="brand-text">
+        <div class="brand-name">skill-lock</div>
+        <div class="brand-sub">Agent Skills 适配管理</div>
+      </div>
+    </div>
+    <nav>
+      <button class="nav-item active" data-view="matrix">
+        <span class="nav-icon">▦</span> 适配矩阵
+      </button>
+      <button class="nav-item" data-view="skills">
+        <span class="nav-icon">☰</span> Skills
+      </button>
+      <button class="nav-item" data-view="discover">
+        <span class="nav-icon">⌕</span> 发现
+      </button>
+      <button class="nav-item" data-view="settings">
+        <span class="nav-icon">⚙</span> 设置
+      </button>
+    </nav>
+    <div class="sidebar-footer" id="health-badge">连接中…</div>
+  </aside>
+
+  <main id="main">
+    <!-- 适配矩阵视图 -->
+    <section id="view-matrix" class="view active">
+      <header class="view-header">
+        <div>
+          <h1>适配矩阵</h1>
+          <p class="view-desc">每个 skill × 每个平台给出明确结论：能一键用、需要确认、还是确实不行。</p>
+        </div>
+        <div class="header-actions">
+          <button id="btn-refresh" class="btn">刷新</button>
+          <button id="btn-apply-all" class="btn btn-primary">全部应用</button>
+        </div>
+      </header>
+      <div id="matrix-legend" class="legend">
+        <span class="badge tier-full">✓ 一键用</span>
+        <span class="badge tier-full-star">✓* 可用需确认</span>
+        <span class="badge tier-adapted">⚠ 需适配确认</span>
+        <span class="badge tier-partial">¶ 手动步骤</span>
+        <span class="badge tier-incompatible">✗ 不兼容</span>
+      </div>
+      <div id="matrix-wrap"><div class="loading">正在扫描 skills…</div></div>
+    </section>
+
+    <!-- Skills 视图 -->
+    <section id="view-skills" class="view">
+      <header class="view-header"><h1>Skills</h1></header>
+      <div id="skills-list" class="cards"><div class="loading">加载中…</div></div>
+    </section>
+
+    <!-- 发现视图（M3 占位） -->
+    <section id="view-discover" class="view">
+      <header class="view-header"><h1>发现</h1></header>
+      <div class="placeholder">search 即审计（M3）：搜索结果将现场过静态安全门并标注分级。</div>
+    </section>
+
+    <!-- 设置视图 -->
+    <section id="view-settings" class="view">
+      <header class="view-header"><h1>设置</h1></header>
+      <div class="settings-box">
+        <label for="roots-input">Skills 扫描目录（每行一个）</label>
+        <textarea id="roots-input" rows="4" spellcheck="false"></textarea>
+        <button id="btn-save-roots" class="btn btn-primary">保存</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- 适配详情抽屉 -->
+<div id="drawer-mask" class="drawer-mask hidden"></div>
+<aside id="drawer" class="drawer hidden">
+  <header class="drawer-header">
+    <h2 id="drawer-title">适配详情</h2>
+    <button id="drawer-close" class="btn btn-icon">✕</button>
+  </header>
+  <div id="drawer-body" class="drawer-body"></div>
+</aside>
+
+<div id="toast" class="toast hidden"></div>
+<script src="app.js"></script>
+</body>
+</html>

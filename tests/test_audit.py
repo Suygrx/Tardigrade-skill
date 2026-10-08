@@ -1,6 +1,6 @@
 from skill_lock.audit import run_audit
 
-from conftest import VALID_SKILL_MD, make_skill
+from .conftest import VALID_SKILL_MD, make_skill
 
 
 def test_benign_skill_is_clean(tmp_path):

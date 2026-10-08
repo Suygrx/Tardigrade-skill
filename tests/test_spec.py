@@ -1,6 +1,6 @@
 from skill_lock.spec import SpecError, load_skill, validate_skill
 
-from conftest import VALID_SKILL_MD, make_skill
+from .conftest import VALID_SKILL_MD, make_skill
 
 
 def test_valid_skill_passes(tmp_path):

@@ -1,0 +1,10 @@
+id: cursor
+name: Cursor
+discovery: resident-rules
+frontmatter_fields: [name, description]
+capabilities:
+  shell: {supported: true, caveat: run in agent terminal with approval}
+  network: {supported: true}
+  fs_write: {supported: true}
+script_runtime: python
+notes: No automatic skill triggering; skills degrade to resident .cursor/rules (context cost applies).

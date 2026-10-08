@@ -1,0 +1,10 @@
+id: codex
+name: Codex
+discovery: native-skills
+frontmatter_fields: [name, description, license, metadata]
+capabilities:
+  shell: {supported: true, caveat: per-command approval}
+  network: {supported: true}
+  fs_write: {supported: true}
+script_runtime: python
+notes: allowed-tools is not honored natively; every shell command asks for approval.

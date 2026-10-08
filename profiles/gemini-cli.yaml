@@ -1,0 +1,10 @@
+id: gemini-cli
+name: Gemini CLI
+discovery: native-skills
+frontmatter_fields: [name, description, metadata]
+capabilities:
+  shell: {supported: true, caveat: user confirmation per command}
+  network: {supported: false}
+  fs_write: {supported: true}
+script_runtime: python
+notes: Sandbox restricts outbound network unless explicitly configured.

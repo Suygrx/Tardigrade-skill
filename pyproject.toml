@@ -1,3 +1,18 @@
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["core", "server"]
 testpaths = ["tests"]
+
+[project]
+name = "skill-lock"
+version = "0.2.0"
+description = "Desktop manager + adaptation engine for Agent Skills"
+requires-python = ">=3.11"
+dependencies = ["typer>=0.12", "pydantic>=2.7", "pyyaml>=6.0"]
+
+[project.optional-dependencies]
+server = ["fastapi>=0.111", "uvicorn>=0.30", "httpx>=0.27"]
+desktop = ["pywebview>=5.0"]
+dev = ["pytest>=8.0", "httpx>=0.27", "fastapi>=0.111", "uvicorn>=0.30"]
+
+[project.scripts]
+skill-lock = "skill_lock.cli:main"

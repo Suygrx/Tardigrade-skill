@@ -2,7 +2,7 @@ import tomllib
 
 from skill_lock.lockfile import LockFile, build_entry
 
-from conftest import make_skill
+from .conftest import make_skill
 
 
 def test_build_and_roundtrip(tmp_path):

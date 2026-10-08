@@ -1,0 +1,10 @@
+id: opencode
+name: OpenCode
+discovery: native-skills
+frontmatter_fields: [name, description, license, metadata, allowed-tools]
+capabilities:
+  shell: {supported: true}
+  network: {supported: false}
+  fs_write: {supported: true}
+script_runtime: null
+notes: Instructions are carried natively, but there is no in-platform script execution environment.

@@ -1,11 +1,6 @@
-.venv/
-.venv2/
-__pycache__/
-*.py[cod]
-*.egg-info/
+.venv*
+.idea/
 .pytest_cache/
-.ruff_cache/
-dist/
-build/
-demo/installed/
-demo/skills.lock
+__pycache__/
+*.egg-info/
+skills.lock

@@ -1,0 +1,10 @@
+id: claude-code
+name: Claude Code
+discovery: native-skills
+frontmatter_fields: [name, description, license, compatibility, metadata, allowed-tools]
+capabilities:
+  shell: {supported: true}
+  network: {supported: true}
+  fs_write: {supported: true}
+script_runtime: python
+notes: Native SKILL.md support; progressive loading; full capability set.
