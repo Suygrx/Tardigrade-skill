@@ -69,7 +69,7 @@ class LockFile:
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         blocks = [entry.to_toml() for entry in self.entries.values()]
         header = (
-            "# skills.lock - managed by skill-lock. Do not edit manually.\n"
+            "# skills.lock - managed by tardigrade-skill. Do not edit manually.\n"
             "# Reproducible install state: source pin + content hashes.\n\n"
         )
         lock_path.write_text(header + "\n".join(blocks), encoding="utf-8")

@@ -1,4 +1,4 @@
-from skill_lock.audit import run_audit
+from tardigrade_skill.audit import run_audit
 
 from .conftest import VALID_SKILL_MD, make_skill
 

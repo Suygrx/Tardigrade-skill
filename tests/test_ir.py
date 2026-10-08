@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from skill_lock.ir import build_ir
-from skill_lock.spec import SpecError
+from tardigrade_skill.ir import build_ir
+from tardigrade_skill.spec import SpecError
 
 from .conftest import VALID_SKILL_MD
 

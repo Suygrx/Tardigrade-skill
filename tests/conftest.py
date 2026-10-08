@@ -6,7 +6,7 @@ from pathlib import Path
 
 VALID_SKILL_MD = """---
 name: sample-skill
-description: A benign sample skill used in tests. Use when testing skill-lock.
+description: A benign sample skill used in tests. Use when testing tardigrade-skill.
 license: MIT
 metadata:
   author: test-org

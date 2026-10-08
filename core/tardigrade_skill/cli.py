@@ -1,4 +1,4 @@
-"""skill-lock CLI: validate / audit / install / list / check."""
+"""tardigrade-skill CLI: validate / audit / install / list / check."""
 
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ def install(
     lock_root: Path = typer.Option(Path.cwd(), "--lock-root", hidden=True),
 ) -> None:
     """Audited install pipeline: resolve → validate → audit → lock → dispatch."""
-    with tempfile.TemporaryDirectory(prefix="skill-lock-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="tardigrade-skill-") as tmp:
         workdir = Path(tmp)
         try:
             root, source_desc, resolved_sha = resolve_source(source, workdir)
@@ -110,7 +110,7 @@ def list_cmd(
     """List skills recorded in the lockfile."""
     lock = LockFile.load(lock_root)
     if not lock.entries:
-        typer.echo("no skills in lockfile (run: skill-lock install ...)")
+        typer.echo("no skills in lockfile (run: tardigrade-skill install ...)")
         return
     for name, entry in lock.entries.items():
         typer.echo(f"{name}  source={entry.source}  rev={entry.rev or '-'}  files={len(entry.files)}  at={entry.installed_at}")
@@ -160,7 +160,7 @@ def main_callback(
 
 def _print_version(value: bool) -> None:
     if value:
-        typer.echo(f"skill-lock {__version__}")
+        typer.echo(f"tardigrade-skill {__version__}")
         raise typer.Exit()
 
 

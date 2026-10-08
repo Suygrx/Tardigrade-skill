@@ -1,4 +1,4 @@
-"""skill_lock server package (FastAPI app)."""
+"""tardigrade_skill server package (FastAPI app)."""
 
 from .app import app, create_app
 

@@ -1,6 +1,6 @@
-"""skill-lock desktop server: thin FastAPI layer over the core engine.
+"""tardigrade-skill desktop server: thin FastAPI layer over the core engine.
 
-No business logic lives here — every endpoint delegates to skill_lock core
+No business logic lives here — every endpoint delegates to tardigrade_skill core
 modules (spec / audit / ir / profiles / adapt / installer / dispatcher / lockfile).
 """
 
@@ -12,14 +12,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from skill_lock.adapt import judge_skill
-from skill_lock.audit import run_audit
-from skill_lock.dispatcher import DispatchError, dispatch
-from skill_lock.installer import find_skill_dirs as scan_skill_dirs
-from skill_lock.ir import SkillIR, build_ir
-from skill_lock.lockfile import LockFile, build_entry
-from skill_lock.profiles import default_profiles_dir, load_profiles
-from skill_lock.spec import SpecError, validate_skill
+from tardigrade_skill.adapt import judge_skill
+from tardigrade_skill.audit import run_audit
+from tardigrade_skill.dispatcher import DispatchError, dispatch
+from tardigrade_skill.installer import find_skill_dirs as scan_skill_dirs
+from tardigrade_skill.ir import SkillIR, build_ir
+from tardigrade_skill.lockfile import LockFile, build_entry
+from tardigrade_skill.profiles import default_profiles_dir, load_profiles
+from tardigrade_skill.spec import SpecError, validate_skill
 
 from .version import __version__
 
@@ -51,7 +51,7 @@ def _find_demo_roots() -> list[Path]:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="skill-lock desktop", version=__version__)
+    app = FastAPI(title="tardigrade-skill desktop", version=__version__)
     profiles = load_profiles(default_profiles_dir())
     state = {"roots": [str(p) for p in _find_demo_roots()], "lock_root": Path(__file__).resolve().parents[1]}
 

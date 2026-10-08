@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from skill_lock.adapt import judge_skill
-from skill_lock.profiles import PlatformProfile, default_profiles_dir, load_profiles
-from skill_lock.spec import SpecError
+from tardigrade_skill.adapt import judge_skill
+from tardigrade_skill.profiles import PlatformProfile, default_profiles_dir, load_profiles
+from tardigrade_skill.spec import SpecError
 
 from .conftest import VALID_SKILL_MD
 
@@ -24,7 +24,7 @@ def _write_skill(root: Path, name: str, skill_md: str, scripts: dict[str, str] |
 
 BENIGN = VALID_SKILL_MD  # no capability hints, has a benign scripts/helper.py
 NETWORK = VALID_SKILL_MD.replace("name: sample-skill", "name: net-skill").replace(
-    "description: A benign sample skill used in tests. Use when testing skill-lock.",
+    "description: A benign sample skill used in tests. Use when testing tardigrade-skill.",
     "description: Download data from an HTTP API endpoint over the network.",
 )
 

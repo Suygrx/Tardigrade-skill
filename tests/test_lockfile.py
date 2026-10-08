@@ -1,6 +1,6 @@
 import tomllib
 
-from skill_lock.lockfile import LockFile, build_entry
+from tardigrade_skill.lockfile import LockFile, build_entry
 
 from .conftest import make_skill
 
@@ -24,7 +24,7 @@ def test_build_and_roundtrip(tmp_path):
     assert reloaded.entries["sample-skill"].files == entry.files
 
 
-def test_multi_skill_lock_roundtrip(tmp_path):
+def test_multi_tardigrade_skill_roundtrip(tmp_path):
     lock = LockFile()
     for n in ("alpha-skill", "beta-skill", "gamma-skill"):
         d = make_skill(tmp_path / "src" / n, name=n)

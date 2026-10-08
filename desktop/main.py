@@ -1,4 +1,4 @@
-"""skill-lock desktop launcher.
+"""tardigrade-skill desktop launcher.
 
 Lifecycle: start uvicorn on a free localhost port first, then open the pywebview
 window pointed at it; when the window closes, shut the server down gracefully.
@@ -38,7 +38,7 @@ def main() -> None:
     try:
         import webview  # pywebview
 
-        webview.create_window("skill-lock", url, width=1180, height=760, min_size=(960, 640))
+        webview.create_window("Tardigrade-skill", url, width=1180, height=760, min_size=(960, 640))
         webview.start()
     except ImportError:
         print(f"pywebview not installed — dev fallback: opening {url} in your browser. Ctrl+C to quit.")

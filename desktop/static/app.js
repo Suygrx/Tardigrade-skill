@@ -1,4 +1,4 @@
-/* skill-lock desktop frontend — adaptation matrix */
+/* tardigrade-skill desktop frontend — adaptation matrix */
 "use strict";
 
 const $ = (sel) => document.querySelector(sel);

@@ -1,4 +1,4 @@
-from skill_lock.spec import SpecError, load_skill, validate_skill
+from tardigrade_skill.spec import SpecError, load_skill, validate_skill
 
 from .conftest import VALID_SKILL_MD, make_skill
 
@@ -31,7 +31,7 @@ def test_name_consecutive_hyphens_rejected(tmp_path):
 
 def test_description_too_long_rejected(tmp_path):
     md = VALID_SKILL_MD.replace(
-        "description: A benign sample skill used in tests. Use when testing skill-lock.",
+        "description: A benign sample skill used in tests. Use when testing tardigrade-skill.",
         "description: " + "x" * 1025,
     )
     d = make_skill(tmp_path, skill_md=md)
