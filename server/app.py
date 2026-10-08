@@ -6,6 +6,9 @@ modules (spec / audit / ir / profiles / adapt / installer / dispatcher / lockfil
 
 from __future__ import annotations
 
+import json
+import shutil
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -17,7 +20,7 @@ from tardigrade_skill import discover
 from tardigrade_skill import llm as llm_module
 from tardigrade_skill.adapt import judge_skill
 from tardigrade_skill.audit import run_audit
-from tardigrade_skill.dispatcher import DispatchError, dispatch
+from tardigrade_skill.dispatcher import DispatchError, TARGETS, dispatch, target_dir
 from tardigrade_skill.installer import find_skill_dirs as scan_skill_dirs
 from tardigrade_skill.installer import resolve_source, SourceError
 
@@ -32,7 +35,8 @@ class UninstallBody(BaseModel):
 
 class ImportBody(BaseModel):
     path: str
-    agent: str
+    agent: str = ""  # legacy field; import now archives into the library, not a platform
+
 from tardigrade_skill.ir import SkillIR, build_ir
 from tardigrade_skill.lockfile import LockFile, build_entry
 from tardigrade_skill.profiles import default_profiles_dir, load_profiles
@@ -59,11 +63,13 @@ class ApplyBody(BaseModel):
 
 class SettingsBody(BaseModel):
     roots: list[str]
+    download_dir: str | None = None
 
 
 class AdaptBody(BaseModel):
     skill: str
     agent: str
+    dir: str | None = None  # library/任意允许目录下的 skill 源目录（管理页开关触发适配时使用）
 
 
 class AdaptationIdBody(BaseModel):
@@ -86,9 +92,17 @@ class InstallBody(BaseModel):
     agent: str
 
 
-    class ImportBody(BaseModel):
-        path: str
-        agent: str
+class DownloadBody(BaseModel):
+    source: str
+
+
+class ToggleBody(BaseModel):
+    dir: str
+    agent: str
+
+
+class SkillDetailBody(BaseModel):
+    path: str
 
 
 def _find_demo_roots() -> list[Path]:
@@ -112,7 +126,29 @@ def _static_dir() -> Path:
 def create_app() -> FastAPI:
     app = FastAPI(title="Tardigrade-skill desktop", version=__version__)
     profiles = load_profiles(default_profiles_dir())
-    state = {"roots": [str(p) for p in _find_demo_roots()], "lock_root": Path(__file__).resolve().parents[1]}
+    # 默认落到当前用户的下载目录（需求指定），设置页可改
+    default_download_dir = str(Path("~/Downloads/Tardigrade-skills").expanduser())
+    state = {
+        "roots": [str(p) for p in _find_demo_roots()],
+        "lock_root": Path(__file__).resolve().parents[1],
+        "download_dir": default_download_dir,  # 市场/导入的 skill 落库目录（设置可改）
+    }
+
+    def _library_meta_path() -> Path:
+        return Path(state["download_dir"]) / ".library-meta.json"
+
+    def _load_library_meta() -> dict:
+        try:
+            return json.loads(_library_meta_path().read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+    def _save_library_meta(meta: dict) -> None:
+        try:
+            Path(state["download_dir"]).mkdir(parents=True, exist_ok=True)
+            _library_meta_path().write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+        except OSError:
+            pass
 
     # ------------------------------------------------------------- helpers
 
@@ -260,12 +296,14 @@ def create_app() -> FastAPI:
 
     @app.get("/api/settings")
     def get_settings() -> dict:
-        return {"roots": state["roots"]}
+        return {"roots": state["roots"], "download_dir": state["download_dir"]}
 
     @app.post("/api/settings")
     def set_settings(body: SettingsBody) -> dict:
         state["roots"] = body.roots
-        return {"roots": state["roots"]}
+        if body.download_dir:
+            state["download_dir"] = body.download_dir
+        return {"roots": state["roots"], "download_dir": state["download_dir"]}
 
     # ------------------------------------------------------------- L2 adaptation (BYOK)
 
@@ -278,10 +316,15 @@ def create_app() -> FastAPI:
     def adapt(body: AdaptBody) -> dict:
         if body.agent not in profiles:
             raise HTTPException(400, f"unknown agent '{body.agent}'")
-        skill_dirs = {d.name: d for d in _scan_skills(_roots_or_400(None))}
-        d = skill_dirs.get(body.skill)
-        if d is None:
-            raise HTTPException(404, f"skill '{body.skill}' not found in roots")
+        if body.dir:
+            d = Path(body.dir).expanduser()
+            if not (d / "SKILL.md").is_file():
+                raise HTTPException(400, "该目录没有 SKILL.md，不是有效的 skill")
+        else:
+            skill_dirs = {dd.name: dd for dd in _scan_skills(_roots_or_400(None))}
+            d = skill_dirs.get(body.skill)
+            if d is None:
+                raise HTTPException(404, f"skill '{body.skill}' not found in roots")
         judgment = judge_skill(d, profiles[body.agent])
         if judgment.tier != "adapted":
             raise HTTPException(400, f"tier is '{judgment.tier}', only 'adapted' cells run the LLM engine")
@@ -380,36 +423,139 @@ def create_app() -> FastAPI:
             out.append({"agent": p.id, "name": p.name, "discovery": p.discovery, "detected": detected.get(p.id, False), "skills": items})
         return {"platforms": out}
 
+    def _audit_badge(report) -> dict:
+        counts = {s: sum(1 for f in report.findings if f.severity == s) for s in ("CRITICAL", "HIGH", "LOW")}
+        if counts["CRITICAL"]:
+            return {"badge": "blocked", "detail": f"CRITICAL={counts['CRITICAL']}"}
+        if counts["HIGH"] or counts["LOW"]:
+            return {"badge": "findings", "detail": f"HIGH={counts['HIGH']} LOW={counts['LOW']}"}
+        return {"badge": "pass", "detail": "no findings"}
+
+    def _copy_into_library(src: Path, source: str) -> dict:
+        """Copy a validated skill dir into the download library. Returns row."""
+        lib = Path(state["download_dir"])
+        lib.mkdir(parents=True, exist_ok=True)
+        dest = lib / src.name
+        if dest.resolve() == src.resolve():
+            raise HTTPException(400, "该目录已在下载库中")
+        if dest.exists():
+            shutil.rmtree(dest)  # 重新导入 = 覆盖我们管理的库副本
+        shutil.copytree(src, dest)
+        meta = _load_library_meta()
+        meta[src.name] = {"source": source, "added_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+        _save_library_meta(meta)
+        return {"skill": src.name, "dir": str(dest), "source": source}
+
     @app.post("/api/import")
     def import_local(body: ImportBody) -> dict:
-        """Import a local skill directory into a platform (audit gate -> install -> record)."""
-        if body.agent not in profiles:
-            raise HTTPException(400, f"unknown agent '{body.agent}'")
+        """Import a local skill directory into the library (audit gate -> copy)."""
         src = Path(body.path).expanduser()
         if not src.is_dir():
             raise HTTPException(404, f"目录不存在：{src}")
         if not (src / "SKILL.md").is_file():
             raise HTTPException(400, "该目录没有 SKILL.md，不是有效的 skill")
         report = run_audit(src)
-        counts = {s: sum(1 for f in report.findings if f.severity == s) for s in ("CRITICAL", "HIGH", "LOW")}
-        badge_out = {"badge": "pass", "detail": "no findings"}
-        if counts["CRITICAL"]:
-            badge_out = {"badge": "blocked", "detail": f"CRITICAL={counts['CRITICAL']}"}
-        elif counts["HIGH"] or counts["LOW"]:
-            badge_out = {"badge": "findings", "detail": f"HIGH={counts['HIGH']} LOW={counts['LOW']}"}
+        badge_out = _audit_badge(report)
         if badge_out["badge"] == "blocked":
             raise HTTPException(400, f"安全审计拦截（{badge_out['detail']}），已拒绝导入")
+        row = _copy_into_library(src, source=f"local:{src}")
+        return {"ok": True, **row, "audit": badge_out}
+
+    @app.post("/api/download")
+    def download(body: DownloadBody) -> dict:
+        """Market install: resolve a remote source into the download library (audit gate)."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory(prefix="tardigrade-download-") as tmp:
+            workdir = Path(tmp)
+            try:
+                root, source_desc, _resolved_sha = resolve_source(body.source, workdir)
+            except SourceError as e:
+                raise HTTPException(400, f"source error: {e}")
+            skill_dirs = scan_skill_dirs(root)
+            if not skill_dirs:
+                raise HTTPException(400, "no skill directories found (no SKILL.md within 2 levels)")
+            results = []
+            for d in skill_dirs:
+                report = run_audit(d)
+                badge_out = _audit_badge(report)
+                if badge_out["badge"] == "blocked":
+                    results.append({"skill": d.name, "ok": False, "audit": badge_out})
+                    continue
+                row = _copy_into_library(d, source=f"market:{body.source}")
+                results.append({"skill": d.name, "ok": True, "dir": row["dir"], "audit": badge_out})
+        return {"ok": True, "source": body.source, "results": results}
+
+    @app.get("/api/library")
+    def library() -> dict:
+        """Local skill library (downloaded + imported) with parsed descriptions."""
+        lib = Path(state["download_dir"])
+        meta = _load_library_meta()
+        skills = []
+        if lib.is_dir():
+            for d in _scan_skills([str(lib)]):
+                item = {"name": d.name, "dir": str(d), "source": meta.get(d.name, {}).get("source", "local")}
+                problems = validate_skill(d)
+                item["valid"] = not problems
+                if not problems:
+                    try:
+                        ir: SkillIR = build_ir(d)
+                        item["description"] = ir.description
+                    except SpecError:
+                        item["description"] = ""
+                else:
+                    item["description"] = problems[0]
+                skills.append(item)
+        return {"dir": str(lib), "skills": skills}
+
+    @app.post("/api/toggle")
+    def toggle(body: ToggleBody) -> dict:
+        """管理页平台开关：适配则安装（写入记录），不适配则返回判定供前端弹窗。"""
+        if body.agent not in profiles:
+            raise HTTPException(400, f"unknown agent '{body.agent}'")
+        src = Path(body.dir).expanduser()
+        if not (src / "SKILL.md").is_file():
+            raise HTTPException(400, "该目录没有 SKILL.md，不是有效的 skill")
+        profile = profiles[body.agent]
+        judgment = judge_skill(src, profile)
+        if judgment.tier not in {"full", "full*"}:
+            return {"ok": False, "tier": judgment.tier, **judgment.to_dict()}
+        problems = validate_skill(src)
+        if problems:
+            return {"ok": False, "tier": "invalid", "reasons": problems}
+        report = run_audit(src)
+        if report.blocked:
+            return {"ok": False, "tier": "blocked", "reasons": [report.summary()]}
         try:
             dest = dispatch(src, body.agent)
         except DispatchError as e:
             raise HTTPException(400, str(e))
-        adapt_llm.record_install(src.name, body.agent, dest, source=str(src))
-        return {
-            "ok": True,
-            "skill": src.name,
-            "dest": str(dest),
-            "audit": badge_out,
-        }
+        adapt_llm.record_install(src.name, body.agent, dest, source=f"toggle:{src}")
+        return {"ok": True, "tier": judgment.tier, "dest": str(dest)}
+
+    @app.post("/api/skill-detail")
+    def skill_detail(body: SkillDetailBody) -> dict:
+        """读取一个 skill 的 SKILL.md 原文。路径必须位于允许的目录内。"""
+        path = Path(body.path).expanduser().resolve()
+        allowed_bases = [Path(state["download_dir"]).expanduser().resolve()]
+        for agent in TARGETS:
+            try:
+                allowed_bases.append(target_dir(agent, project=False).resolve())
+                allowed_bases.append(target_dir(agent, project=True).resolve())
+            except DispatchError:
+                continue
+        for root in state["roots"]:
+            allowed_bases.append(Path(root).expanduser().resolve())
+        if not any(str(path).startswith(str(base)) for base in allowed_bases):
+            raise HTTPException(403, "路径不在允许的目录内")
+        md = path / "SKILL.md"
+        if not md.is_file():
+            raise HTTPException(404, "该目录没有 SKILL.md")
+        try:
+            content = md.read_text(encoding="utf-8")
+        except OSError as e:
+            raise HTTPException(400, f"读取失败：{e}")
+        return {"name": path.name, "path": str(path), "content": content}
 
     @app.post("/api/uninstall")
     def uninstall(body: UninstallBody) -> dict:

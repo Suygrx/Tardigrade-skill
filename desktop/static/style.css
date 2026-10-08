@@ -395,3 +395,96 @@ table.changelog { width: 100%; border-collapse: collapse; font-size: 12px; margi
 ::-webkit-scrollbar-thumb { background: #333338; border-radius: 9999px; border: 2px solid transparent; background-clip: content-box; }
 ::-webkit-scrollbar-thumb:hover { background: #4a4a52; background-clip: content-box; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ============================================================
+   Skills 管理页（mg-*）+ 市场卡片网格（mkt-*）+ 通用确认弹窗
+   ============================================================ */
+.tb-manage-btn {
+  height: 30px; padding: 0 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--card); color: var(--fg);
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+}
+.tb-manage-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+.tb-viewtitle { font-size: 13px; color: var(--muted-fg); margin-left: 8px; }
+
+.mg-tabs {
+  display: flex; gap: 4px; padding: 4px; margin-bottom: 14px;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  width: fit-content;
+}
+.mg-tab {
+  padding: 6px 16px; border: none; border-radius: var(--radius-sm);
+  background: transparent; color: var(--muted-fg); font-size: 13px; cursor: pointer;
+  transition: all 0.15s;
+}
+.mg-tab:hover { color: var(--fg); }
+.mg-tab.active { background: var(--selected); color: var(--fg); font-weight: 500; }
+.mg-pane { display: none; }
+.mg-pane.active { display: block; }
+
+.mg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.mg-chip {
+  padding: 4px 12px; border-radius: 999px; font-size: 12px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--card); color: var(--muted-fg);
+  transition: all 0.15s;
+}
+.mg-chip span { opacity: 0.7; margin-left: 2px; }
+.mg-chip:hover { color: var(--fg); }
+.mg-chip.active { border-color: var(--primary); color: var(--primary); background: rgba(21, 131, 248, 0.1); }
+
+.mg-rows { display: flex; flex-direction: column; gap: 8px; }
+.mg-row {
+  display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.mg-row-main { flex: 1; min-width: 0; }
+.mg-name { font-size: 14px; font-weight: 500; color: var(--fg); cursor: pointer; }
+.mg-name:hover { color: var(--primary); text-decoration: underline; }
+.mg-desc { font-size: 12px; color: var(--muted-fg); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mg-icons { display: flex; gap: 6px; flex-shrink: 0; }
+
+.plat-toggle {
+  width: 30px; height: 30px; border-radius: var(--radius-sm); cursor: pointer;
+  border: 1px solid var(--border); background: var(--muted); color: var(--muted-fg);
+  font-size: 14px; transition: all 0.15s; position: relative;
+}
+.plat-toggle:hover { border-color: var(--pc, var(--primary)); color: var(--pc, var(--primary)); }
+.plat-toggle.on {
+  border-color: var(--pc, var(--emerald)); color: var(--pc, var(--emerald));
+  background: rgba(16, 185, 129, 0.1); box-shadow: 0 0 0 1px var(--pc, var(--emerald-border));
+}
+.plat-toggle::after {
+  content: ""; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+  width: 4px; height: 2px; border-radius: 1px; background: transparent;
+}
+.plat-toggle.on::after { background: var(--pc, var(--emerald)); }
+
+.pending-dot-mg { color: var(--amber); margin-left: 2px; }
+
+/* ── 市场搜索结果：小卡片网格，一行多卡 ── */
+.mkt-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+.mkt-card {
+  display: flex; flex-direction: column; gap: 6px; padding: 12px 14px;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  transition: border-color 0.15s;
+}
+.mkt-card:hover { border-color: var(--border-strong); }
+.mkt-name { font-size: 14px; font-weight: 600; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mkt-repo { font-size: 11px; color: var(--muted-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mkt-sum { font-size: 12px; color: var(--muted-fg); flex: 1; min-height: 32px; }
+.mkt-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mkt-install { font-size: 12px; padding: 4px 10px; height: auto; }
+
+/* ── 通用确认弹窗（平台不适配 → 适配性处理） ── */
+.confirm-box {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 400px; max-width: 90vw; z-index: 60;
+  background: var(--card); border: 1px solid var(--border-strong); border-radius: var(--radius);
+  padding: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.confirm-text { font-size: 14px; line-height: 1.6; color: var(--fg); margin: 0 0 16px; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }

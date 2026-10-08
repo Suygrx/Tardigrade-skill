@@ -1,11 +1,13 @@
-/* Tardigrade-skill desktop frontend — CC Switch v3 style (dark, topbar, provider cards) */
+/* Tardigrade-skill desktop frontend — CC Switch style (dark, topbar, skills management) */
 "use strict";
 
 const $ = (sel) => document.querySelector(sel);
 let MATRIX = null;
-let SETTINGS = { roots: [] };
+let SETTINGS = { roots: [], download_dir: "" };
 let INSTALLED = null;
+let LIBRARY = null;
 let SELECTED_PLATFORM = localStorage.getItem("tardigrade.platform") || "claude-code";
+const MANAGE = { rows: [], platforms: [], filter: null, q: "" };
 
 const TIER_LABEL = {
   "full": ["✓ 一键用", "tier-full"],
@@ -15,14 +17,7 @@ const TIER_LABEL = {
   "incompatible": ["✗ 不兼容", "tier-incompatible"],
 };
 
-const VIEW_TITLES = {
-  home: "",
-  matrix: "适配矩阵",
-  skills: "Skills",
-  pending: "待确认",
-  discover: "市场",
-  settings: "设置",
-};
+const VIEW_TITLES = { home: "", manage: "Skills 管理", discover: "市场" };
 
 async function api(path, body) {
   const opts = body
@@ -32,7 +27,7 @@ async function api(path, body) {
   if (!resp.ok) {
     let msg = `${resp.status}`;
     try { msg = (await resp.json()).detail || msg; } catch (e) { /* ignore */ }
-    throw new Error(msg);
+    throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
   }
   return resp.json();
 }
@@ -45,40 +40,70 @@ function toast(msg, ms = 2600) {
   el._t = setTimeout(() => el.classList.add("hidden"), ms);
 }
 
-/* ---------------- navigation (topbar-driven, cc-switch pattern) ---------------- */
+/* 通用确认弹窗（pywebview 里没有原生 confirm） */
+function ask(text) {
+  return new Promise((resolve) => {
+    $("#confirm-text").textContent = text;
+    $("#confirm-mask").classList.remove("hidden");
+    $("#confirm-box").classList.remove("hidden");
+    const done = (v) => {
+      $("#confirm-mask").classList.add("hidden");
+      $("#confirm-box").classList.add("hidden");
+      $("#confirm-ok").onclick = null;
+      $("#confirm-cancel").onclick = null;
+      $("#confirm-mask").onclick = null;
+      resolve(v);
+    };
+    $("#confirm-ok").onclick = () => done(true);
+    $("#confirm-cancel").onclick = () => done(false);
+    $("#confirm-mask").onclick = () => done(false);
+  });
+}
+
+/* 极简 markdown 渲染（标题/列表/粗体/行内代码/代码块） */
+function renderMd(src) {
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  let inCode = false;
+  const lines = esc(src).split("\n").map((line) => {
+    if (/^```/.test(line)) { inCode = !inCode; return inCode ? '<pre class="md-code">' : "</pre>"; }
+    if (inCode) return line;
+    if (/^###\s/.test(line)) return `<h4>${line.slice(4)}</h4>`;
+    if (/^##\s/.test(line)) return `<h3>${line.slice(3)}</h3>`;
+    if (/^#\s/.test(line)) return `<h2>${line.slice(2)}</h2>`;
+    if (/^[-*]\s/.test(line)) return `<div class="md-li">• ${line.slice(2)}</div>`;
+    if (!line.trim()) return '<div class="md-gap"></div>';
+    return `<p>${line}</p>`;
+  }).join("");
+  return lines
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/`([^`]+)`/g, '<code class="md-inline">$1</code>');
+}
+
+/* ---------------- navigation (topbar) ---------------- */
 function setView(name) {
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
   $(`#view-${name}`).classList.add("active");
   document.body.dataset.view = name;
 
-  // header: back button + view title (cc-switch: 非 providers 视图显示 ← + 标题)
-  const title = VIEW_TITLES[name] || name;
-  $("#view-title").textContent = title;
+  $("#view-title").textContent = VIEW_TITLES[name] || name;
   $("#view-title").classList.toggle("hidden", name === "home");
   $("#btn-back").classList.toggle("hidden", name === "home");
   $("#platform-pill").classList.toggle("hidden", name !== "home");
-  $("#btn-go-discover").classList.toggle("hidden", name !== "home");
-
-  document.querySelectorAll(".nav-btn").forEach((b) => {
-    b.classList.toggle("current", b.dataset.view === name);
-  });
+  $("#btn-manage").classList.toggle("current", name === "manage");
+  $("#btn-go-discover").classList.toggle("hidden", name === "discover");
 
   if (name === "home") loadHome();
-  if (name === "matrix") loadMatrix();
-  if (name === "skills") loadSkills();
-  if (name === "pending") loadPending();
-  if (name === "settings") loadSettings();
+  if (name === "manage") loadManage();
+  if (name === "discover") populateAgentSelect();
 }
 
 document.querySelectorAll("[data-view]").forEach((btn) => {
   btn.addEventListener("click", () => setView(btn.dataset.view));
 });
 
-function switchView(name) {
-  setView(name);
-}
+function switchView(name) { setView(name); }
 
-/* ---------------- home (cc-switch providers view: single-column provider cards) ---------------- */
+/* ---------------- home (platform cards) ---------------- */
 const AGENT_META = {
   "claude-code": { icon: "◈", color: "#d97757", short: "Claude" },
   "codex": { icon: "◉", color: "#10a37f", short: "Codex" },
@@ -98,32 +123,10 @@ const AGENT_META = {
   "kilo": { icon: "◆", color: "#34d399", short: "Kilo" },
   "trae": { icon: "▣", color: "#ef4444", short: "Trae" },
   "trae-cn": { icon: "▣", color: "#dc2626", short: "Trae CN" },
+  "workbuddy": { icon: "❖", color: "#34d399", short: "WorkBuddy" },
 };
 
-async function loadHome() {
-  const box = $("#home-list");
-  box.innerHTML = '<div class="loading">加载中…</div>';
-  try {
-    INSTALLED = await api("/api/installed");
-    renderPlatformPill();
-    renderHome();
-    populateAgentSelect();
-  } catch (e) {
-    box.innerHTML = `<div class="loading">加载失败：${e.message}</div>`;
-  }
-}
-
-function populateAgentSelect() {
-  const sel = $("#discover-agent");
-  const current = sel.value;
-  sel.innerHTML = INSTALLED.platforms
-    .map((p) => `<option value="${p.agent}">${p.name}</option>`)
-    .join("");
-  if (INSTALLED.platforms.some((p) => p.agent === current)) sel.value = current;
-}
-
 function visiblePlatforms() {
-  // 只显示本机探测到的平台（cc-switch 行为）；一个都没探测到则全部显示
   const detected = INSTALLED.platforms.filter((p) => p.detected);
   return detected.length ? detected : INSTALLED.platforms;
 }
@@ -139,11 +142,10 @@ function ensureSelectedPlatform() {
 function renderPlatformPill() {
   ensureSelectedPlatform();
   const pill = $("#platform-pill");
-  const vis = visiblePlatforms();
-  pill.innerHTML = vis
+  pill.innerHTML = visiblePlatforms()
     .map((p) => {
       const meta = AGENT_META[p.agent] || { icon: "◆", color: "#9ca3af", short: p.name };
-      return `<button class="as-btn ${p.agent === SELECTED_PLATFORM ? "active" : ""}" data-platform="${p.agent}" title="${p.name}${p.detected ? "" : "（未检测到安装）"}">
+      return `<button class="as-btn ${p.agent === SELECTED_PLATFORM ? "active" : ""}" data-platform="${p.agent}" title="${p.name}">
         <span class="as-glyph" style="color:${meta.color}">${meta.icon}</span>${meta.short}
       </button>`;
     })
@@ -162,16 +164,38 @@ function platformOf(agent) {
   return INSTALLED.platforms.find((p) => p.agent === agent) || { skills: [] };
 }
 
+async function loadHome() {
+  const box = $("#home-list");
+  box.innerHTML = '<div class="loading">加载中…</div>';
+  try {
+    INSTALLED = await api("/api/installed");
+    renderPlatformPill();
+    renderHome();
+    populateAgentSelect();
+  } catch (e) {
+    box.innerHTML = `<div class="loading">加载失败：${e.message}</div>`;
+  }
+}
+
+function populateAgentSelect() {
+  if (!INSTALLED) return;
+  const sel = $("#discover-agent");
+  const current = sel.value;
+  sel.innerHTML = INSTALLED.platforms
+    .map((p) => `<option value="${p.agent}">${p.name}</option>`)
+    .join("");
+  if (INSTALLED.platforms.some((p) => p.agent === current)) sel.value = current;
+}
+
 function renderHome() {
   const box = $("#home-list");
   const p = platformOf(SELECTED_PLATFORM);
   const meta = AGENT_META[SELECTED_PLATFORM] || { icon: "◆", color: "#9ca3af" };
   if (!p.skills.length) {
     box.innerHTML = `<div class="prov-empty">该平台还没有安装任何 skill<br>
-      <span style="color:var(--muted-fg);font-size:12px">点右上角 <span style="color:var(--orange)">＋</span> 去「市场」搜索安装，或在「适配矩阵」应用已有 skill</span></div>`;
+      <span style="color:var(--muted-fg);font-size:12px">点右上角 <span style="color:var(--orange)">＋</span> 去「市场」搜索安装，或在「Skills 管理」导入本地 skill</span></div>`;
     return;
   }
-  // cc-switch 语义：当前启用的供应商高亮 emerald → 对应最近安装且仍在位的 Tardigrade 管理 skill
   const managedTimes = p.skills.filter((s) => s.managed && s.present).map((s) => s.installed_at || "");
   const latest = managedTimes.length ? Math.max(...managedTimes) : null;
 
@@ -233,10 +257,169 @@ async function ping() {
     if (el) {
       el.textContent = s.configured
         ? `已配置：${s.model} @ ${s.base_url}`
-        : "未配置。请在 ~/.tardigrade/models.toml 中填写 [default] 段（base_url / api_key / model）。";
+        : "未配置。请在下方填写 Base URL / API Key / 模型名（或编辑 ~/.tardigrade/models.toml）。";
       el.className = "llm-status " + (s.configured ? "ok" : "missing");
     }
   } catch (e) { /* ignore */ }
+}
+
+/* ---------------- skills 管理（库 + 本机 × 平台开关） ---------------- */
+function mgTab(name) {
+  document.querySelectorAll(".mg-tab").forEach((t) => t.classList.toggle("active", t.dataset.mg === name));
+  document.querySelectorAll(".mg-pane").forEach((p) => p.classList.remove("active"));
+  $(`#mg-${name}`).classList.add("active");
+  if (name === "skills") loadManage();
+  if (name === "matrix") loadMatrix();
+  if (name === "pending") loadPending();
+  if (name === "settings") loadSettings();
+}
+document.querySelectorAll(".mg-tab").forEach((t) => t.addEventListener("click", () => mgTab(t.dataset.mg)));
+
+async function loadManage() {
+  $("#mg-list").innerHTML = '<div class="loading">加载中…</div>';
+  try {
+    const [lib, inst] = await Promise.all([api("/api/library"), api("/api/installed")]);
+    LIBRARY = lib;
+    INSTALLED = inst;
+    buildManageRows();
+    renderManage();
+  } catch (e) {
+    $("#mg-list").innerHTML = `<div class="loading">加载失败：${e.message}</div>`;
+  }
+}
+
+function buildManageRows() {
+  const rows = new Map();
+  for (const s of LIBRARY.skills) {
+    rows.set(s.name, { name: s.name, desc: s.description || "", dir: s.dir, tag: "库", external: false, enabled: {}, externalEnabled: {} });
+  }
+  for (const p of INSTALLED.platforms) {
+    for (const s of p.skills) {
+      let row = rows.get(s.skill);
+      if (!row) {
+        row = { name: s.skill, desc: "", dir: s.dest, tag: s.managed ? "已启用" : "本机", external: !s.managed, enabled: {}, externalEnabled: {} };
+        rows.set(s.skill, row);
+      }
+      if (s.present) {
+        row.enabled[p.agent] = true;
+        if (!s.managed) row.externalEnabled[p.agent] = true;
+      }
+      if (!row.desc && !s.managed) row.tag = "本机";
+    }
+  }
+  MANAGE.rows = [...rows.values()].sort((a, b) => a.name.localeCompare(b.name));
+  MANAGE.platforms = visiblePlatforms();
+}
+
+function renderManage() {
+  const chips = $("#mg-chips");
+  const counts = {};
+  for (const p of MANAGE.platforms) counts[p.agent] = MANAGE.rows.filter((r) => r.enabled[p.agent]).length;
+  chips.innerHTML =
+    `<button class="mg-chip ${MANAGE.filter === null ? "active" : ""}" data-p="">全部 <span>${MANAGE.rows.length}</span></button>` +
+    MANAGE.platforms
+      .map((p) => {
+        const meta = AGENT_META[p.agent] || { icon: "◆", color: "#9ca3af", short: p.name };
+        return `<button class="mg-chip ${MANAGE.filter === p.agent ? "active" : ""}" data-p="${p.agent}">
+          <span style="color:${meta.color}">${meta.icon}</span> ${meta.short} <span>${counts[p.agent] || 0}</span>
+        </button>`;
+      })
+      .join("");
+  chips.querySelectorAll(".mg-chip").forEach((c) =>
+    c.addEventListener("click", () => { MANAGE.filter = c.dataset.p || null; renderManage(); })
+  );
+
+  const q = MANAGE.q.trim().toLowerCase();
+  const rows = MANAGE.rows.filter(
+    (r) =>
+      (!MANAGE.filter || r.enabled[MANAGE.filter]) &&
+      (!q || r.name.toLowerCase().includes(q) || (r.desc || "").toLowerCase().includes(q))
+  );
+
+  $("#mg-list").innerHTML = rows.length
+    ? `<div class="mg-rows">` + rows.map((r) => {
+        const icons = MANAGE.platforms
+          .map((p) => {
+            const meta = AGENT_META[p.agent] || { icon: "◆", color: "#9ca3af", short: p.name };
+            const on = !!r.enabled[p.agent];
+            const ext = !!(r.externalEnabled && r.externalEnabled[p.agent]);
+            return `<button class="plat-toggle ${on ? "on" : ""}" data-skill="${r.name}" data-agent="${p.agent}"
+              title="${meta.short}${on ? "：已开启" : "：未开启"}${ext ? "（本机已有，非 Tardigrade 管理）" : ""}"
+              style="--pc:${meta.color}">${meta.icon}</button>`;
+          })
+          .join("");
+        return `<div class="mg-row">
+          <div class="mg-row-main">
+            <div class="prov-title-row"><span class="mg-name" data-dir="${r.dir}" title="查看 SKILL.md">${r.name}</span>
+              <span class="prov-pill pill-matrix">${r.tag}</span></div>
+            <div class="mg-desc">${(r.desc || "—").slice(0, 120)}</div>
+          </div>
+          <div class="mg-icons">${icons}</div>
+        </div>`;
+      }).join("") + `</div>`
+    : `<div class="prov-empty">没有匹配的 skill</div>`;
+
+  $("#mg-list").querySelectorAll(".plat-toggle").forEach((b) =>
+    b.addEventListener("click", () => togglePlatform(b.dataset.skill, b.dataset.agent))
+  );
+  $("#mg-list").querySelectorAll(".mg-name").forEach((n) =>
+    n.addEventListener("click", () => showSkillMd(n.dataset.dir))
+  );
+}
+
+$("#mg-search").addEventListener("input", (e) => { MANAGE.q = e.target.value; renderManage(); });
+
+async function togglePlatform(skill, agent) {
+  const row = MANAGE.rows.find((r) => r.name === skill);
+  if (!row) return;
+  const pname = (AGENT_META[agent] || {}).short || agent;
+  if (row.enabled[agent]) {
+    if (row.externalEnabled && row.externalEnabled[agent]) return toast("本机已有的 skill，非 Tardigrade 管理，请在该平台手动处理");
+    if (!(await ask(`确定在 ${pname} 上关闭（卸载）「${skill}」？`))) return;
+    try {
+      const r = await api("/api/uninstall", { skill, agent });
+      toast(r.ok ? `已卸载：${r.removed}` : r.message);
+    } catch (e) { toast(`卸载失败：${e.message}`); }
+    loadManage();
+    return;
+  }
+  let r;
+  try {
+    r = await api("/api/toggle", { dir: row.dir, agent });
+  } catch (e) { return toast(`开启失败：${e.message}`); }
+  if (r.ok) {
+    toast(`已开启：${skill} → ${pname}`);
+    loadManage();
+    return;
+  }
+  // 不适配：弹窗询问是否走适配处理
+  const [label] = TIER_LABEL[r.tier] || [r.tier];
+  if (r.tier === "adapted") {
+    const go = await ask(`当前 ${pname} 不适配「${skill}」（${label}），是否要进行适配性处理？`);
+    if (!go) return;
+    toast("适配中…（调用 BYOK 模型，产物需确认后安装）");
+    try {
+      const res = await api("/api/adapt", { skill, agent, dir: row.dir });
+      toast(res.status === "pending" ? "适配产物已生成，请到「Skills 管理 → 待确认」确认安装" : `适配结果：${res.status}`);
+      refreshPendingDot();
+    } catch (e) { toast(`适配失败：${e.message}`); }
+  } else {
+    toast(`当前 ${pname} 不适配「${skill}」（${label}），暂无自动适配方案`);
+  }
+}
+
+/* skill 详情：读取并渲染 SKILL.md */
+async function showSkillMd(dir) {
+  $("#drawer-title").textContent = "SKILL.md";
+  $("#drawer-body").innerHTML = '<div class="loading">读取中…</div>';
+  $("#drawer").classList.remove("hidden");
+  $("#drawer-mask").classList.remove("hidden");
+  try {
+    const r = await api("/api/skill-detail", { path: dir });
+    $("#drawer-body").innerHTML = `<div class="md-doc"><h2 class="md-title">${r.name}</h2>${renderMd(r.content)}</div>`;
+  } catch (e) {
+    $("#drawer-body").innerHTML = `<div class="none">读取失败：${e.message}</div>`;
+  }
 }
 
 /* ---------------- matrix ---------------- */
@@ -244,7 +427,8 @@ async function loadMatrix() {
   const wrap = $("#matrix-wrap");
   wrap.innerHTML = '<div class="loading">正在扫描 skills…</div>';
   try {
-    MATRIX = await api("/api/matrix", { roots: SETTINGS.roots.length ? SETTINGS.roots : null });
+    const roots = [...new Set([...(SETTINGS.roots || []), SETTINGS.download_dir].filter(Boolean))];
+    MATRIX = await api("/api/matrix", { roots: roots.length ? roots : null });
     renderMatrix();
   } catch (e) {
     wrap.innerHTML = `<div class="loading">加载失败：${e.message}</div>`;
@@ -272,13 +456,12 @@ function renderMatrix() {
     })
     .join("");
   wrap.innerHTML = `<div class="matrix-card"><table class="matrix"><thead><tr><th class="skill-col">Skill</th>${thead}</tr></thead><tbody>${rows}</tbody></table></div>`;
-
-  wrap.querySelectorAll("td.cell").forEach((td) => {
-    td.addEventListener("click", () => openDrawer(td.dataset.skill, td.dataset.agent));
-  });
+  wrap.querySelectorAll("td.cell").forEach((td) =>
+    td.addEventListener("click", () => openDrawer(td.dataset.skill, td.dataset.agent))
+  );
 }
 
-/* ---------------- drawer ---------------- */
+/* ---------------- adaptation drawer ---------------- */
 function openDrawer(skill, agent) {
   const row = MATRIX.rows.find((r) => r.skill === skill);
   if (!row) return;
@@ -314,7 +497,7 @@ function openDrawer(skill, agent) {
       btn.textContent = "适配中…（调用 BYOK 模型）";
       $("#adapt-result").innerHTML = "";
       try {
-        const r = await api("/api/adapt", { skill, agent });
+        const r = await api("/api/adapt", { skill, agent, dir: row.dir });
         renderAdaptResult(r);
       } catch (e) {
         $("#adapt-result").innerHTML = `<div class="none">失败：${e.message}</div>`;
@@ -352,7 +535,7 @@ function renderAdaptResult(r) {
       ${r.notes ? `<div class="pc-notes">模型备注：${r.notes}</div>` : ""}
       ${r.status === "pending" ? `<div class="pc-actions"><button class="btn btn-primary" onclick="confirmAdaptation('${r.id}')">确认并安装</button><button class="btn" onclick="rejectAdaptation('${r.id}')">放弃</button></div>` : "<div class='none'>已确认安装。</div>"}
     `;
-    refreshPendingCount();
+    refreshPendingDot();
   } else {
     box.innerHTML = `<div class="none">未能产出适配产物（${r.status}）：${r.message || ""}</div>`;
   }
@@ -363,7 +546,6 @@ async function confirmAdaptation(id) {
     const r = await api("/api/adaptations/confirm", { id });
     toast(r.ok ? `已安装到 ${r.dest}` : `确认失败：${r.message}`);
     closeDrawer();
-    loadPending();
   } catch (e) {
     toast(`确认失败：${e.message}`);
   }
@@ -374,20 +556,19 @@ async function rejectAdaptation(id) {
     await api("/api/adaptations/reject", { id });
     toast("已放弃该适配产物");
     closeDrawer();
-    loadPending();
   } catch (e) {
     toast(`操作失败：${e.message}`);
   }
 }
 
-/* ---------------- pending view (HITL) ---------------- */
+/* ---------------- pending ---------------- */
 async function loadPending() {
   const box = $("#pending-list");
   box.innerHTML = '<div class="loading">加载中…</div>';
   try {
     const data = await api("/api/adaptations");
     const items = data.adaptations;
-    refreshPendingCount(items.filter((a) => a.status === "pending").length);
+    refreshPendingDot(items.filter((a) => a.status === "pending").length);
     if (!items.length) {
       box.innerHTML = '<div class="placeholder">暂无适配产物。在适配矩阵中点击「需适配确认」格子的「运行 LLM 适配」。</div>';
       return;
@@ -412,15 +593,14 @@ async function loadPending() {
   }
 }
 
-async function refreshPendingCount(explicit) {
+async function refreshPendingDot(explicit) {
   try {
     let n = explicit;
     if (n == null) {
       const data = await api("/api/adaptations?status=pending");
       n = data.adaptations.length;
     }
-    const el = $("#pending-count");
-    el.classList.toggle("hidden", n === 0);
+    $("#pending-dot-mg").classList.toggle("hidden", n === 0);
   } catch (e) { /* ignore */ }
 }
 
@@ -431,7 +611,7 @@ function closeDrawer() {
 $("#drawer-close").addEventListener("click", closeDrawer);
 $("#drawer-mask").addEventListener("click", closeDrawer);
 
-/* ---------------- apply ---------------- */
+/* ---------------- matrix apply-all ---------------- */
 $("#btn-apply-all").addEventListener("click", async () => {
   if (!MATRIX || !MATRIX.rows.length) return toast("没有可应用的 skill");
   const oneClick = [];
@@ -441,7 +621,7 @@ $("#btn-apply-all").addEventListener("click", async () => {
       if (cell.tier === "full" || cell.tier === "full*") oneClick.push({ agent: cell.agent, skill: row.skill });
     }
   }
-  if (!oneClick.length) return toast("没有「一键用」档位的格子可应用（需适配档请等 HITL 流程）");
+  if (!oneClick.length) return toast("没有「一键用」档位的格子可应用");
   if (!SETTINGS.roots.length) return toast("请先在设置中配置扫描目录");
   const byAgent = {};
   for (const item of oneClick) (byAgent[item.agent] = byAgent[item.agent] || []).push(item.skill);
@@ -459,41 +639,41 @@ $("#btn-apply-all").addEventListener("click", async () => {
   toast(`全部应用完成：成功 ${ok}，失败 ${fail}`);
   loadMatrix();
 });
-
 $("#btn-refresh").addEventListener("click", loadMatrix);
 
-/* ---------------- skills view ---------------- */
-async function loadSkills() {
-  const box = $("#skills-list");
-  box.innerHTML = '<div class="loading">加载中…</div>';
+/* ---------------- settings ---------------- */
+async function loadSettings() {
   try {
-    const data = await api("/api/skills", { roots: SETTINGS.roots.length ? SETTINGS.roots : null });
-    if (!data.skills.length) {
-      box.innerHTML = '<div class="placeholder">没有找到 skill。可在「设置」里添加扫描目录。</div>';
-      return;
-    }
-    box.innerHTML = data.skills
-      .map((s) => {
-        const reqs = s.requires
-          ? Object.entries(s.requires).filter(([, v]) => v).map(([k]) => k)
-          : [];
-        return `<div class="skill-card">
-          <h3>${s.name}${s.valid ? "" : " ⚠"}</h3>
-          <p>${(s.description || s.problems[0] || "").slice(0, 140)}</p>
-          <div class="chips">
-            ${reqs.map((r) => `<span class="chip">${r}</span>`).join("")}
-            <span class="chip">${(s.scripts || []).length} scripts</span>
-            <span class="chip">${s.blocks ?? 0} blocks</span>
-          </div>
-        </div>`;
-      })
-      .join("");
+    SETTINGS = await api("/api/settings");
+    $("#roots-input").value = SETTINGS.roots.join("\n");
+    $("#download-dir-input").value = SETTINGS.download_dir || "";
   } catch (e) {
-    box.innerHTML = `<div class="loading">加载失败：${e.message}</div>`;
+    toast(`读取设置失败：${e.message}`);
   }
 }
 
-/* ---------------- llm config (settings) ---------------- */
+$("#btn-save-roots").addEventListener("click", async () => {
+  const roots = $("#roots-input").value.split("\n").map((s) => s.trim()).filter(Boolean);
+  try {
+    SETTINGS = await api("/api/settings", { roots, download_dir: SETTINGS.download_dir || null });
+    toast("已保存");
+  } catch (e) {
+    toast(`保存失败：${e.message}`);
+  }
+});
+
+$("#btn-save-dl").addEventListener("click", async () => {
+  const dir = $("#download-dir-input").value.trim();
+  if (!dir) return toast("请填写下载库目录");
+  try {
+    SETTINGS = await api("/api/settings", { roots: SETTINGS.roots, download_dir: dir });
+    toast("下载目录已保存");
+  } catch (e) {
+    toast(`保存失败：${e.message}`);
+  }
+});
+
+/* ---------------- llm config ---------------- */
 $("#btn-llm-save").addEventListener("click", async () => {
   const body = {
     base_url: $("#llm-url").value.trim(),
@@ -542,7 +722,7 @@ function renderProbe(r) {
   if (r.ok) toast("模型配置已生效");
 }
 
-/* ---------------- discover (search = audit) ---------------- */
+/* ---------------- market（搜索小卡片 + 本地导入） ---------------- */
 $("#btn-search").addEventListener("click", async () => {
   const q = $("#discover-input").value.trim();
   if (!q) return toast("请输入关键词");
@@ -567,100 +747,76 @@ $("#btn-search").addEventListener("click", async () => {
   }
 });
 
-/* ---------------- import local skill ---------------- */
-$("#btn-import").addEventListener("click", async () => {
-  const p = $("#import-path").value.trim();
-  if (!p) return toast("请先填写本地 skill 目录路径");
-  const agent = $("#discover-agent").value;
-  const btn = $("#btn-import");
-  btn.disabled = true; btn.textContent = "审计中…";
-  const box = $("#discover-message");
-  try {
-    const r = await api("/api/import", { path: p, agent });
-    box.textContent = `✓ 审计${r.audit.badge === "pass" ? "通过" : "有发现（" + r.audit.detail + "）"}：已导入 ${r.skill} → ${agent}，安装到 ${r.dest}`;
-    box.classList.remove("hidden");
-    toast(`已导入：${r.skill} → ${agent}`);
-  } catch (e) {
-    box.textContent = `导入失败：${e.message}`;
-    box.classList.remove("hidden");
-  } finally {
-    btn.disabled = false; btn.textContent = "审计并导入到所选平台";
-  }
-});
-
 const AUDIT_BADGE = {
-  pass: ["✓ 审计通过", "badge-pass"],
+  pass: ["✓ 通过", "badge-pass"],
   findings: ["⚠ 有发现", "badge-findings"],
-  blocked: ["✗ 危险，已拦截", "badge-blocked"],
+  blocked: ["✗ 已拦截", "badge-blocked"],
   skipped: ["– 未分级", "badge-skipped"],
 };
 
+/* 每个 skill 一张小卡片，一行多张；审计详情折叠成小徽章 */
 function renderDiscover(results, cached) {
   const box = $("#discover-results");
   if (!results.length) {
     box.innerHTML = '<div class="placeholder">没有匹配结果。</div>';
     return;
   }
-  box.innerHTML = results
-    .map((r) => {
-      const [label, cls] = AUDIT_BADGE[r.audit.badge] || [r.audit.badge, ""];
-      const skills = (r.audit.skills || [])
-        .map((s) => {
-          const [sl, sc] = AUDIT_BADGE[s.badge] || [s.badge, ""];
-          return `<div>${s.name} <span class="badge ${sc}">${sl}</span> <span style="color:var(--muted-fg)">${s.detail || ""} · ${s.summary || ""}</span></div>`;
-        })
-        .join("");
-      return `<div class="repo-card">
-        <div class="rc-head">
-          <h3><a href="${r.html_url}" target="_blank" rel="noopener">${r.full_name}</a> ★${r.stars ?? 0}${r.installs ? ` · ⬇${r.installs.toLocaleString()} 安装` : ""}${cached ? " <span style='color:var(--muted-fg);font-size:11px'>(缓存)</span>" : ""}</h3>
-          <span class="badge ${cls}">${label} ${r.audit.detail || ""}</span>
+  const cards = [];
+  for (const repo of results) {
+    const [label, cls] = AUDIT_BADGE[repo.audit.badge] || [repo.audit.badge, ""];
+    const skills = repo.audit.skills || [];
+    const installTargets = skills.length ? skills : [{ name: repo.full_name.split("/").pop(), summary: repo.description || "" }];
+    for (const s of installTargets) {
+      cards.push(`<div class="mkt-card">
+        <div class="mkt-name" title="${s.name}">${s.name}</div>
+        <div class="mkt-repo" title="${repo.full_name}">${repo.full_name} ★${repo.stars ?? 0}${repo.installs ? ` · ⬇${repo.installs.toLocaleString()}` : ""}${cached ? " · (缓存)" : ""}</div>
+        <div class="mkt-sum" title="${(s.summary || repo.description || "").replace(/"/g, "&quot;")}">${(s.summary || repo.description || "—").slice(0, 90)}</div>
+        <div class="mkt-foot">
+          <span class="badge ${cls}">${label}</span>
+          <button class="btn btn-primary mkt-install" data-source="${repo.html_url}">安装到本地库</button>
         </div>
-        <div class="rc-meta">${r.description || ""}</div>
-        <div class="rc-skills">${skills || '<span style="color:var(--muted-fg)">未找到 skill</span>'}</div>
-        <div class="pc-actions"><button class="btn btn-primary" onclick="installRepo('${r.html_url}')">安装到 ${"{{agent}}"}</button></div>
-      </div>`;
-    })
-    .join("");
-  box.querySelectorAll(".pc-actions .btn").forEach((b) => {
-    b.textContent = `安装到 ${$("#discover-agent").value}`;
-  });
-}
-
-async function installRepo(htmlUrl) {
-  const agent = $("#discover-agent").value;
-  const repoPath = htmlUrl.replace("https://github.com/", "");
-  try {
-    const r = await api("/api/install", { source: `https://github.com/${repoPath}.git`, agent });
-    const ok = r.results.filter((x) => x.ok).length;
-    const fail = r.results.length - ok;
-    toast(`安装完成：成功 ${ok}，失败 ${fail}${fail ? "（详见审计/适配判定）" : ""}`);
-    if (ok) {
-      SELECTED_PLATFORM = agent;
-      localStorage.setItem("tardigrade.platform", agent);
-      setView("home");
+      </div>`);
     }
+  }
+  box.innerHTML = `<div class="mkt-grid">${cards.join("")}</div>`;
+  box.querySelectorAll(".mkt-install").forEach((b) =>
+    b.addEventListener("click", () => downloadToLibrary(b.dataset.source, b))
+  );
+}
+
+async function downloadToLibrary(source, btn) {
+  const old = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "下载中…"; }
+  try {
+    const r = await api("/api/download", { source: `${source}.git` });
+    const ok = r.results.filter((x) => x.ok).length;
+    const blocked = r.results.filter((x) => !x.ok);
+    toast(`已下载 ${ok} 个 skill 到本地库${blocked.length ? `（${blocked.length} 个被审计拦截）` : ""}`);
+    if (btn) btn.textContent = "✓ 已入库";
   } catch (e) {
-    toast(`安装失败：${e.message}`);
+    toast(`下载失败：${e.message}`);
+    if (btn) btn.textContent = old;
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
-/* ---------------- settings (roots) ---------------- */
-async function loadSettings() {
+$("#btn-import").addEventListener("click", async () => {
+  const p = $("#import-path").value.trim();
+  if (!p) return toast("请先填写本地 skill 目录路径");
+  const btn = $("#btn-import");
+  btn.disabled = true; btn.textContent = "审计中…";
+  const box = $("#discover-message");
   try {
-    SETTINGS = await api("/api/settings");
-    $("#roots-input").value = SETTINGS.roots.join("\n");
+    const r = await api("/api/import", { path: p });
+    box.textContent = `✓ 审计${r.audit.badge === "pass" ? "通过" : "有发现（" + r.audit.detail + "）"}：已导入 ${r.skill} 到 Skill 库（${r.dir}）`;
+    box.classList.remove("hidden");
+    toast(`已导入：${r.skill}`);
   } catch (e) {
-    toast(`读取设置失败：${e.message}`);
-  }
-}
-
-$("#btn-save-roots").addEventListener("click", async () => {
-  const roots = $("#roots-input").value.split("\n").map((s) => s.trim()).filter(Boolean);
-  try {
-    SETTINGS = await api("/api/settings", { roots });
-    toast("已保存");
-  } catch (e) {
-    toast(`保存失败：${e.message}`);
+    box.textContent = `导入失败：${e.message}`;
+    box.classList.remove("hidden");
+  } finally {
+    btn.disabled = false; btn.textContent = "导入到 Skill 库";
   }
 });
 
@@ -669,5 +825,5 @@ $("#btn-save-roots").addEventListener("click", async () => {
   await ping();
   try { SETTINGS = await api("/api/settings"); } catch (e) { /* keep defaults */ }
   setView("home");
-  refreshPendingCount();
+  refreshPendingDot();
 })();

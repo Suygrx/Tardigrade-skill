@@ -109,8 +109,11 @@ def test_import_local_skill(tmp_path: Path, isolated_store) -> None:
 
     r = c.post("/api/import", json={"path": str(src), "agent": "codex"})
     assert r.status_code == 200 and r.json()["ok"] is True
-    assert Path(r.json()["dest"]).is_dir()
-    assert any(i["skill"] == "pdf-helper" and i["managed"] for p in c.get("/api/installed").json()["platforms"] for i in p["skills"])
+    # new semantics: import archives into the skill library (no direct platform install)
+    assert r.json()["dir"] and Path(r.json()["dir"]).is_dir()
+    assert r.json()["skill"] == "pdf-helper"
+    lib = c.get("/api/library").json()
+    assert any(s["name"] == "pdf-helper" for s in lib["skills"])
 
     # no SKILL.md -> rejected
     empty = tmp_path / "not-a-skill"
