@@ -1,9 +1,11 @@
-/* tardigrade-skill desktop frontend — adaptation matrix */
+/* Tardigrade-skill desktop frontend — CC Switch v3 style (dark, topbar, provider cards) */
 "use strict";
 
 const $ = (sel) => document.querySelector(sel);
 let MATRIX = null;
 let SETTINGS = { roots: [] };
+let INSTALLED = null;
+let SELECTED_PLATFORM = localStorage.getItem("tardigrade.platform") || "claude-code";
 
 const TIER_LABEL = {
   "full": ["✓ 一键用", "tier-full"],
@@ -11,6 +13,15 @@ const TIER_LABEL = {
   "adapted": ["⚠ 需适配确认", "tier-adapted"],
   "partial": ["¶ 手动步骤", "tier-partial"],
   "incompatible": ["✗ 不兼容", "tier-incompatible"],
+};
+
+const VIEW_TITLES = {
+  home: "",
+  matrix: "适配矩阵",
+  skills: "Skills",
+  pending: "待确认",
+  discover: "发现",
+  settings: "设置",
 };
 
 async function api(path, body) {
@@ -34,83 +45,122 @@ function toast(msg, ms = 2600) {
   el._t = setTimeout(() => el.classList.add("hidden"), ms);
 }
 
-/* ---------------- navigation ---------------- */
-document.querySelectorAll(".nav-item").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".nav-item").forEach((b) => b.classList.remove("active"));
-    document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
-    btn.classList.add("active");
-    $(`#view-${btn.dataset.view}`).classList.add("active");
-    if (btn.dataset.view === "home") loadHome();
-    if (btn.dataset.view === "matrix") loadMatrix();
-    if (btn.dataset.view === "skills") loadSkills();
-    if (btn.dataset.view === "pending") loadPending();
-    if (btn.dataset.view === "settings") loadSettings();
+/* ---------------- navigation (topbar-driven, cc-switch pattern) ---------------- */
+function setView(name) {
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  $(`#view-${name}`).classList.add("active");
+  document.body.dataset.view = name;
+
+  // header: back button + view title (cc-switch: 非 providers 视图显示 ← + 标题)
+  const title = VIEW_TITLES[name] || name;
+  $("#view-title").textContent = title;
+  $("#view-title").classList.toggle("hidden", name === "home");
+  $("#btn-back").classList.toggle("hidden", name === "home");
+  $("#platform-pill").classList.toggle("hidden", name !== "home");
+  $("#btn-go-discover").classList.toggle("hidden", name !== "home");
+
+  document.querySelectorAll(".nav-btn").forEach((b) => {
+    b.classList.toggle("current", b.dataset.view === name);
   });
+
+  if (name === "home") loadHome();
+  if (name === "matrix") loadMatrix();
+  if (name === "skills") loadSkills();
+  if (name === "pending") loadPending();
+  if (name === "settings") loadSettings();
+}
+
+document.querySelectorAll("[data-view]").forEach((btn) => {
+  btn.addEventListener("click", () => setView(btn.dataset.view));
 });
 
-/* ---------------- home (CC Switch style platform cards) ---------------- */
+function switchView(name) {
+  setView(name);
+}
+
+/* ---------------- home (cc-switch providers view: single-column provider cards) ---------------- */
 const AGENT_META = {
-  "claude-code": { icon: "◈", color: "#d97757" },
-  "codex": { icon: "◉", color: "#10a37f" },
-  "gemini-cli": { icon: "✦", color: "#4285f4" },
-  "cursor": { icon: "▣", color: "#6b7280" },
-  "opencode": { icon: "⌘", color: "#8b5cf6" },
+  "claude-code": { icon: "◈", color: "#d97757", short: "Claude" },
+  "codex": { icon: "◉", color: "#10a37f", short: "Codex" },
+  "gemini-cli": { icon: "✦", color: "#4285f4", short: "Gemini" },
+  "cursor": { icon: "▣", color: "#9ca3af", short: "Cursor" },
+  "opencode": { icon: "⌘", color: "#a78bfa", short: "OpenCode" },
 };
 
 async function loadHome() {
-  const box = $("#home-grid");
+  const box = $("#home-list");
   box.innerHTML = '<div class="loading">加载中…</div>';
   try {
-    const data = await api("/api/installed");
-    renderHome(data.platforms);
+    INSTALLED = await api("/api/installed");
+    renderPlatformPill();
+    renderHome();
   } catch (e) {
     box.innerHTML = `<div class="loading">加载失败：${e.message}</div>`;
   }
 }
 
-function renderHome(platforms) {
-  const box = $("#home-grid");
-  box.innerHTML = platforms
+function renderPlatformPill() {
+  const pill = $("#platform-pill");
+  pill.innerHTML = INSTALLED.platforms
     .map((p) => {
-      const meta = AGENT_META[p.agent] || { icon: "◆", color: "#6b7280" };
-      const rows = p.skills
-        .map(
-          (s) => `<div class="inst-row">
-            <span class="inst-dot ${s.present ? "" : "missing"}"></span>
-            <div class="inst-main">
-              <div class="inst-name">${s.skill}${s.present ? "" : ' <span class="chip" title="目录已不存在">缺失</span>'}</div>
-              <div class="inst-path" title="${s.dest}">${s.dest}</div>
-            </div>
-            <span class="inst-time">${(s.installed_at || "").slice(0, 10)}</span>
-            <button class="btn btn-icon" onclick="uninstallSkill('${s.skill}', '${p.agent}')">✕</button>
-          </div>`
-        )
-        .join("");
-      const body = rows ||
-        `<div class="inst-empty">还没有通过 Tardigrade 安装的 skill<br><span>去「发现」页搜索，或在「适配矩阵」应用已有 skill</span></div>`;
-      const count = p.skills.length;
-      return `<div class="platform-card">
-        <div class="pc-row">
-          <div class="pc-icon" style="color:${meta.color}"><span>${meta.icon}</span></div>
-          <div class="pc-title">
-            <h3>${p.name}</h3>
-            <div class="pc-sub">${p.agent} · ${p.discovery === "native-skills" ? "原生 skill 支持" : p.discovery === "resident-rules" ? "降级常驻 rules" : "无 skill 机制"}</div>
-          </div>
-          <span class="badge count-badge">${count} 个 skill</span>
+      const meta = AGENT_META[p.agent] || { icon: "◆", color: "#9ca3af", short: p.name };
+      return `<button class="as-btn ${p.agent === SELECTED_PLATFORM ? "active" : ""}" data-platform="${p.agent}" title="${p.name}">
+        <span class="as-glyph" style="color:${meta.color}">${meta.icon}</span>${meta.short}
+      </button>`;
+    })
+    .join("");
+  pill.querySelectorAll(".as-btn").forEach((b) => {
+    b.addEventListener("click", () => {
+      SELECTED_PLATFORM = b.dataset.platform;
+      localStorage.setItem("tardigrade.platform", SELECTED_PLATFORM);
+      renderPlatformPill();
+      renderHome();
+    });
+  });
+}
+
+function platformOf(agent) {
+  return INSTALLED.platforms.find((p) => p.agent === agent) || { skills: [] };
+}
+
+function renderHome() {
+  const box = $("#home-list");
+  const p = platformOf(SELECTED_PLATFORM);
+  const meta = AGENT_META[SELECTED_PLATFORM] || { icon: "◆", color: "#9ca3af" };
+  if (!p.skills.length) {
+    box.innerHTML = `<div class="prov-empty">该平台还没有通过 Tardigrade 安装的 skill<br>
+      <span style="color:var(--muted-fg);font-size:12px">点右上角 <span style="color:var(--orange)">＋</span> 去发现页搜索安装，或在「适配矩阵」应用已有 skill</span></div>`;
+    return;
+  }
+  // cc-switch 语义：当前启用的供应商高亮 emerald → 对应最近安装且仍在位的 skill
+  const times = p.skills.filter((s) => s.present).map((s) => s.installed_at || "");
+  const latest = times.length ? Math.max(...times) : null;
+
+  box.innerHTML = p.skills
+    .map((s) => {
+      const pill = s.present
+        ? String(s.source || "").startsWith("http")
+          ? '<span class="prov-pill pill-repo">仓库安装</span>'
+          : '<span class="prov-pill pill-matrix">矩阵应用</span>'
+        : '<span class="prov-pill pill-missing">缺失</span>';
+      const when = s.installed_at ? s.installed_at.slice(0, 10) : "";
+      const status = s.present
+        ? `<span class="prov-when">⏱ ${when}</span><span class="prov-ok">✓ 在位</span>`
+        : `<span class="prov-err">ⓘ 安装目录不存在</span>`;
+      const state = !s.present ? "state-missing" : (latest && s.installed_at === latest ? "state-current" : "");
+      return `<div class="prov-card ${state}">
+        <span class="prov-grip">⠿</span>
+        <div class="prov-avatar" style="color:${meta.color}">${meta.icon}</div>
+        <div class="prov-main">
+          <div class="prov-title-row"><span class="prov-name">${s.skill}</span>${pill}</div>
+          <div class="prov-path" title="${s.dest}">${s.dest}</div>
         </div>
-        <div class="pc-body">${body}</div>
-        <div class="pc-footer">
-          <button class="btn" onclick="switchView('matrix')">适配矩阵</button>
-          <button class="btn" onclick="switchView('discover')">发现更多</button>
+        <div class="prov-status">${status}
+          <button class="prov-uninstall" onclick="uninstallSkill('${s.skill}', '${SELECTED_PLATFORM}')">卸载</button>
         </div>
       </div>`;
     })
     .join("");
-}
-
-function switchView(name) {
-  document.querySelector(`.nav-item[data-view="${name}"]`).click();
 }
 
 async function uninstallSkill(skill, agent) {
@@ -123,7 +173,6 @@ async function uninstallSkill(skill, agent) {
   }
 }
 
-$("#btn-home-refresh").addEventListener("click", loadHome);
 $("#btn-go-discover").addEventListener("click", () => switchView("discover"));
 
 /* ---------------- health ---------------- */
@@ -328,7 +377,6 @@ async function refreshPendingCount(explicit) {
       n = data.adaptations.length;
     }
     const el = $("#pending-count");
-    el.textContent = n;
     el.classList.toggle("hidden", n === 0);
   } catch (e) { /* ignore */ }
 }
@@ -350,7 +398,7 @@ $("#btn-apply-all").addEventListener("click", async () => {
       if (cell.tier === "full" || cell.tier === "full*") oneClick.push({ agent: cell.agent, skill: row.skill });
     }
   }
-  if (!oneClick.length) return toast("没有「一键用」档位的格子可应用（需适配档请等 M2 HITL 流程）");
+  if (!oneClick.length) return toast("没有「一键用」档位的格子可应用（需适配档请等 HITL 流程）");
   if (!SETTINGS.roots.length) return toast("请先在设置中配置扫描目录");
   const byAgent = {};
   for (const item of oneClick) (byAgent[item.agent] = byAgent[item.agent] || []).push(item.skill);
@@ -495,16 +543,16 @@ function renderDiscover(results, cached) {
       const skills = (r.audit.skills || [])
         .map((s) => {
           const [sl, sc] = AUDIT_BADGE[s.badge] || [s.badge, ""];
-          return `<div>${s.name} <span class="badge ${sc}">${sl}</span> <span style="color:var(--text-dim)">${s.detail || ""} · ${s.summary || ""}</span></div>`;
+          return `<div>${s.name} <span class="badge ${sc}">${sl}</span> <span style="color:var(--muted-fg)">${s.detail || ""} · ${s.summary || ""}</span></div>`;
         })
         .join("");
       return `<div class="repo-card">
         <div class="rc-head">
-          <h3><a href="${r.html_url}" target="_blank" rel="noopener">${r.full_name}</a> ★${r.stars}${cached ? " <span style='color:var(--text-dim);font-size:11px'>(缓存)</span>" : ""}</h3>
+          <h3><a href="${r.html_url}" target="_blank" rel="noopener">${r.full_name}</a> ★${r.stars}${cached ? " <span style='color:var(--muted-fg);font-size:11px'>(缓存)</span>" : ""}</h3>
           <span class="badge ${cls}">${label} ${r.audit.detail || ""}</span>
         </div>
         <div class="rc-meta">${r.description || ""}</div>
-        <div class="rc-skills">${skills || '<span style="color:var(--text-dim)">未找到 skill</span>'}</div>
+        <div class="rc-skills">${skills || '<span style="color:var(--muted-fg)">未找到 skill</span>'}</div>
         <div class="pc-actions"><button class="btn btn-primary" onclick="installRepo('${r.html_url}')">安装到 ${"{{agent}}"}</button></div>
       </div>`;
     })
@@ -522,7 +570,11 @@ async function installRepo(htmlUrl) {
     const ok = r.results.filter((x) => x.ok).length;
     const fail = r.results.length - ok;
     toast(`安装完成：成功 ${ok}，失败 ${fail}${fail ? "（详见审计/适配判定）" : ""}`);
-    if (ok) loadMatrix();
+    if (ok) {
+      SELECTED_PLATFORM = agent;
+      localStorage.setItem("tardigrade.platform", agent);
+      setView("home");
+    }
   } catch (e) {
     toast(`安装失败：${e.message}`);
   }
@@ -552,6 +604,6 @@ $("#btn-save-roots").addEventListener("click", async () => {
 (async function boot() {
   await ping();
   try { SETTINGS = await api("/api/settings"); } catch (e) { /* keep defaults */ }
-  loadHome();
+  setView("home");
   refreshPendingCount();
 })();
