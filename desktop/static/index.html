@@ -1,163 +1,169 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-page-node-id="vojxcRrYA4UMHrIPQRcaU6">
-<head data-page-node-id="1adrkAoGrtML1EY6T74L2l">
-<meta charset="UTF-8" data-page-node-id="REo0k8r3xYAfxSxLJeuTCi">
-<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="aGTQGdhQJOeYrb8uvHE4mP">
+<html lang="zh-CN" data-page-node-id="ye9L1Y66wyzVTudOeJmAx4">
+<head data-page-node-id="HPBi6xApd82xY5Igw8PoUF">
+<meta charset="UTF-8" data-page-node-id="BqN2wxxjrVPmHY0xJLrFb1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="TLdjg49fpsPbjZBYFDx16T">
 <title>Tardigrade-skill</title>
-<link rel="icon" type="image/png" href="logo-icon.png">
-<link rel="stylesheet" href="style.css" data-page-node-id="1QlZR7PiXv1ZxK86lRWsWS">
+<link rel="icon" type="image/png" href="logo-icon.png" data-page-node-id="7tB5fjQc2NKRLApt1vXbeE">
+<link rel="stylesheet" href="style.css" data-page-node-id="OPj4o1lCs7Ymwu8zkOuu20">
 </head>
-<body data-page-node-id="JlSU7M4O08OOdrKOPLjTXE">
-<div id="app" data-page-node-id="S2dAXCEvbMs9pFZHvHfCER">
-  <aside id="sidebar" data-page-node-id="Rs2GfjEBH3ECqxFYGw6P0n">
-    <div class="brand" data-page-node-id="iuu5ywIG51b0dMY7ZLsQHy">
-      <div class="brand-logo"><img src="logo-icon.png" alt="Tardigrade-skill"></div>
-      <div class="brand-text" data-page-node-id="DxT6tVH0QCK5Uy2r6jWfHM">
-        <div class="brand-name" data-page-node-id="ljuHpYFROK1HUDBAYDSNum">Tardigrade-skill</div>
-        <div class="brand-sub" data-page-node-id="V8a731QjQXKryFpEfhc4YN">Agent Skills 适配引擎</div>
-      </div>
+<body data-page-node-id="2tMai8yM0arkaVkTc6Cdqx">
+<div id="app" data-page-node-id="fXYzhDjhevwdO0ypSGlSP3">
+  <aside id="sidebar" data-page-node-id="S8z8UFbEuQoswydShBxeZD">
+    <!-- 顶条 44px：品牌行（logo + 粗体名），v7 与导航间不画分隔线 -->
+    <div class="sidebar-top" data-page-node-id="PGue47BYR6Z7nHWXHHtMP8">
+      <div class="brand-logo" data-page-node-id="x3wuC6iJayPJTygzldXSGy"><img src="logo-icon.png" alt="Tardigrade-skill" data-page-node-id="iUzeZnyLVjdT4A0D9jTJQG"></div>
+      <div class="brand-name" data-page-node-id="MdQGFcS7rAdy356Y7RTsfC">Tardigrade Skill</div>
     </div>
-    <nav data-page-node-id="25uzqZ9s03AuIPw6UgNm5I">
-      <button class="nav-item active" data-view="home">
-        <span class="nav-icon">⌂</span> 主页
+
+    <!-- 应用列表：唯一滚动区域，带分组标签 -->
+    <nav data-page-node-id="zlUA3uGrUWILAUbJL57x3r">
+      <div class="nav-label" data-page-node-id="ruxO6FUv8J5KFk2AxFRRox">功能</div>
+      <button class="nav-item active" data-view="home" data-page-node-id="BLd0cQdzgloOm428c7qNq6">
+        <span class="nav-icon" data-page-node-id="ZYVOWVCuTq5l1vSZ2HhUJ0">⌂</span><span class="nav-text" data-page-node-id="POoZzkRpsYyGZSKBaJEnmN">主页</span>
       </button>
-      <button class="nav-item" data-view="matrix" data-page-node-id="zX9zTjp89Uz7tHYE1i5CtN">
-        <span class="nav-icon" data-page-node-id="OWIOmgvO98wiCnOZkNCjOn">▦</span> 适配矩阵
+      <button class="nav-item" data-view="matrix" data-page-node-id="QgsSmuKa13uEuaCrmiEgAF">
+        <span class="nav-icon" data-page-node-id="H3O6xmbfDvtc3doQkjYzET">▦</span><span class="nav-text" data-page-node-id="qiliswy0fQFTPADFCJEYD6">适配矩阵</span>
       </button>
-      <button class="nav-item" data-view="skills" data-page-node-id="VnBdW0RZp1rtfUDYH7TK3R">
-        <span class="nav-icon" data-page-node-id="dCCRu0Buo3ISV1Amg6hFG0">☰</span> Skills
+      <button class="nav-item" data-view="skills" data-page-node-id="8frtEoXTPY9h9JtTPg0jKG">
+        <span class="nav-icon" data-page-node-id="Jw3pbIdC210tuDQtagfcrD">☰</span><span class="nav-text" data-page-node-id="sXFDUym1aCVbNrg7I1hYfU">Skills</span>
       </button>
-      <button class="nav-item" data-view="pending" data-page-node-id="VunQu0Sa7CkE8UuCkZIamH">
-        <span class="nav-icon" data-page-node-id="rakmak7uyDB5qpLDfHHbxR">⏳</span> 待确认 <span id="pending-count" class="pending-badge hidden" data-page-node-id="I4DTKvi9Kfb0Rgl1FS40ou">0</span>
+      <button class="nav-item" data-view="pending" data-page-node-id="FdDLd6mlFoPv3Bec3jyQzQ">
+        <span class="nav-icon" data-page-node-id="QxURbHy4canzMq7EpnkXQx">⏳</span><span class="nav-text" data-page-node-id="000h2z7fw1DTQatxYhAz0X">待确认</span><span id="pending-count" class="pending-badge hidden" data-page-node-id="rADCPbGEEqspP1O9SoiRn0">0</span>
       </button>
-      <button class="nav-item" data-view="discover" data-page-node-id="HSCVu5rnq7sFlZCOwAFszU">
-        <span class="nav-icon" data-page-node-id="d74d0UCoEGhm9tqNCHdWRq">⌕</span> 发现
-      </button>
-      <button class="nav-item" data-view="settings" data-page-node-id="55MMQwDRDTM6CgzaKTAsKp">
-        <span class="nav-icon" data-page-node-id="MaPlEeV4JZg4e5XJUGTqWO">⚙</span> 设置
+      <button class="nav-item" data-view="discover" data-page-node-id="KsUU4zqyA92E5MUYZySTKh">
+        <span class="nav-icon" data-page-node-id="kITyJui0WNZniviJNPGDRC">⌕</span><span class="nav-text" data-page-node-id="nzTFMLQi6L8nfmJskJsAJI">发现</span>
       </button>
     </nav>
-    <div class="sidebar-footer" data-page-node-id="IiQMfnECZFcCMIF5nAZ6xZ">
-      <div id="health-badge" data-page-node-id="XYqoLDC7diPJwLe7auC6qB">连接中…</div>
-      <div id="llm-badge" class="llm-badge" data-page-node-id="tOt0wSBhNiQHMFnaiuHD1H">模型：检测中…</div>
+
+    <!-- 全局项贴底 -->
+    <div class="sidebar-global" data-page-node-id="y71rWLpcPAwk0VU2TNxP5W">
+      <div class="nav-label" data-page-node-id="ePyVTG5Lbom5RutCJICB7j">全局</div>
+      <button class="nav-item" data-view="settings" data-page-node-id="qz1z4ndtQnqRDrSE3auT2v">
+        <span class="nav-icon" data-page-node-id="rozhvMChZ2OCpwtjQFsAbx">⚙</span><span class="nav-text" data-page-node-id="x1bMiBAo79NSttPrZtdzCu">设置</span>
+      </button>
+      <div class="sidebar-footer" data-page-node-id="nSQb8N9UnPP2uiQMuj8YFj">
+        <div id="health-badge" data-page-node-id="H1xYYpb58iWbFKRZkdJ2wv">连接中…</div>
+        <div id="llm-badge" class="llm-badge" data-page-node-id="pBX6ncIBmVC2ZTFhOUyUXg">模型：检测中…</div>
+      </div>
     </div>
   </aside>
 
-  <main id="main" data-page-node-id="m7mxl1Fw16CnvqpD0SDxr7">
+  <main id="main" data-page-node-id="es5Z8jAOrkMV9eGlQgE5X0">
     <!-- 主页：平台卡片（CC Switch 风格） -->
-    <section id="view-home" class="view active">
-      <header class="view-header">
-        <div>
-          <h1>主页</h1>
-          <p class="view-desc">每个平台一张卡片，列出通过 Tardigrade 安装的 skill，一键管理。</p>
+    <section id="view-home" class="view active" data-page-node-id="GaQwqqgTFs5vXCcoF3EIBV">
+      <header class="view-header" data-page-node-id="G3heVeirNp0ph4DcTodzs7">
+        <div data-page-node-id="0nEkEMGNR1BUpDVbsRMRXj">
+          <h1 data-page-node-id="PqtqK53IXEOpXxg4H9aSKZ">主页</h1>
+          <p class="view-desc" data-page-node-id="GhYekVCBJdZ7DFy34SghAJ">每个平台一张卡片，列出通过 Tardigrade 安装的 skill，一键管理。</p>
         </div>
-        <div class="header-actions">
-          <button id="btn-home-refresh" class="btn">刷新</button>
-          <button id="btn-go-discover" class="btn btn-primary">去发现页安装</button>
+        <div class="header-actions" data-page-node-id="8zqhnRI9Lci24GOmd33qKr">
+          <button id="btn-home-refresh" class="btn" data-page-node-id="q5nhDMXejBJs6IyKvOJq8E">刷新</button>
+          <button id="btn-go-discover" class="btn btn-primary" data-page-node-id="UraxEFF4BePZX1Kiv4CvS5">去发现页安装</button>
         </div>
       </header>
-      <div id="home-grid" class="cards"><div class="loading">加载中…</div></div>
+      <div id="home-grid" class="cards" data-page-node-id="OEGCvtUAh3iczQOClNFOWR"><div class="loading" data-page-node-id="RgsNvrIGpL8FOBIuV8qJQ9">加载中…</div></div>
     </section>
 
     <!-- 适配矩阵视图 -->
-    <section id="view-matrix" class="view" data-page-node-id="L02aSYA3gnK0unyavSmiTO">
-      <header class="view-header" data-page-node-id="fHaM7sbcB4BGSC8U2QJ8jK">
-        <div data-page-node-id="YdTVtATA3NCojIrkI9M2Vp">
-          <h1 data-page-node-id="jK6m2BggEF7C6jYh0rcksd">适配矩阵</h1>
-          <p class="view-desc" data-page-node-id="yQBlkzp4PnmnIXD1v5uCYw">每个 skill × 每个平台给出明确结论：能一键用、需要确认、还是确实不行。</p>
+    <section id="view-matrix" class="view" data-page-node-id="FI9hd0EVMTcBF6tUEOGGS1">
+      <header class="view-header" data-page-node-id="l1z73L5ndP0jD5wNhvHKHh">
+        <div data-page-node-id="i7eryOAvBvWyJ1IOJ4vpmx">
+          <h1 data-page-node-id="pSnTKJGt1UfbGNXDokc1fI">适配矩阵</h1>
+          <p class="view-desc" data-page-node-id="v5JqZM3pMtKDMs6BZYYvXw">每个 skill × 每个平台给出明确结论：能一键用、需要确认、还是确实不行。</p>
         </div>
-        <div class="header-actions" data-page-node-id="bxrCrdQXNMAnGmk8xaSsLj">
-          <button id="btn-refresh" class="btn" data-page-node-id="1F748acXktCUrmiIFHynpr">刷新</button>
-          <button id="btn-apply-all" class="btn btn-primary" data-page-node-id="Es0LCHkRNUoPaDGQWG5hTw">全部应用</button>
+        <div class="header-actions" data-page-node-id="KWPVKHu6oqWcwZrc67Pzma">
+          <button id="btn-refresh" class="btn" data-page-node-id="kQI0jCraXNamV2Cf1hP7k5">刷新</button>
+          <button id="btn-apply-all" class="btn btn-primary" data-page-node-id="FAMjC4G2hN9Gpc0Kvs4Ity">全部应用</button>
         </div>
       </header>
-      <div id="matrix-legend" class="legend" data-page-node-id="YQsqBBZaYNcni1Qt64Djmw">
-        <span class="badge tier-full" data-page-node-id="1Wi1G6wWPbe8ZlHcUhKWax">✓ 一键用</span>
-        <span class="badge tier-full-star" data-page-node-id="1ASmi2yDf3w0lJrNhj7UX6">✓* 可用需确认</span>
-        <span class="badge tier-adapted" data-page-node-id="gTU41bZ5nXDkFxqWzfNzu0">⚠ 需适配确认</span>
-        <span class="badge tier-partial" data-page-node-id="Uuhise9AQYuc2JEh1PKmBS">¶ 手动步骤</span>
-        <span class="badge tier-incompatible" data-page-node-id="ObGIkLavGh1Ha368x4Bg25">✗ 不兼容</span>
+      <div id="matrix-legend" class="legend" data-page-node-id="dpN3I5b1TuSPhWWb8jCpFG">
+        <span class="badge tier-full" data-page-node-id="nWB9CxqMvtHBz1kBaM6Dtn">✓ 一键用</span>
+        <span class="badge tier-full-star" data-page-node-id="ZWjMx9gH1MFHOVmX8LJpX4">✓* 可用需确认</span>
+        <span class="badge tier-adapted" data-page-node-id="WePYcNZ7VeScKr3my5kYWH">⚠ 需适配确认</span>
+        <span class="badge tier-partial" data-page-node-id="hnT99bANIN45AgxQaa1BDa">¶ 手动步骤</span>
+        <span class="badge tier-incompatible" data-page-node-id="JbcEhrp5YQ9sjCmYxYCf0y">✗ 不兼容</span>
       </div>
-      <div id="matrix-wrap" data-page-node-id="ONuaCBHvXxx0NaEjt3DwOL"><div class="loading" data-page-node-id="bNOQCpvP1SrrmAB28ePSfT">正在扫描 skills…</div></div>
+      <div id="matrix-wrap" data-page-node-id="9y8iMbaEJ8Ui8HgQp5i39j"><div class="loading" data-page-node-id="5OMrIaixEdhh8nEYO5sak0">正在扫描 skills…</div></div>
     </section>
 
     <!-- Skills 视图 -->
-    <section id="view-skills" class="view" data-page-node-id="hlpKVw87badl9COcDabpqj">
-      <header class="view-header" data-page-node-id="8k8BnZNryMWBKfWpxMoLat"><h1 data-page-node-id="ZsmHT5v5SJVuzvUQ4rwfrQ">Skills</h1></header>
-      <div id="skills-list" class="cards" data-page-node-id="0Sd0EzBA5IWEyVZ2LtSMvP"><div class="loading" data-page-node-id="AQHn5GnK2DbBn2gpcjZEGh">加载中…</div></div>
+    <section id="view-skills" class="view" data-page-node-id="I9lXmhaGLmOpYjALhN2tIN">
+      <header class="view-header" data-page-node-id="yhKA2H3EN7dOSTjmhxujbM"><h1 data-page-node-id="fPBe4tA8BvHEts5fFZgJiG">Skills</h1></header>
+      <div id="skills-list" class="cards" data-page-node-id="z9CriTcpkfcVVPdDrLnJTY"><div class="loading" data-page-node-id="P2ki10crRdesAV2OHLZ6NQ">加载中…</div></div>
     </section>
 
     <!-- 待确认视图（HITL） -->
-    <section id="view-pending" class="view" data-page-node-id="BKbKJocdaNN08qKQhErCwA">
-      <header class="view-header" data-page-node-id="QzTbGE6aFXm3ZKOZplLy1l">
-        <div data-page-node-id="oaFIVdbhWNFKoKruMHVQyc">
-          <h1 data-page-node-id="CARDGFTk8lU2O9TeXabiop">待确认</h1>
-          <p class="view-desc" data-page-node-id="wGlQITa2t4AJWZOexfHBgh">LLM 适配产物在确认前不会落盘安装。请核对改动清单（changelog）后决定。</p>
+    <section id="view-pending" class="view" data-page-node-id="vYdDhuJBbK2facthlghM5m">
+      <header class="view-header" data-page-node-id="Pn4dgdy5keqUTDvOGkRXLE">
+        <div data-page-node-id="KfeFMTYBCnISebHooCH4lO">
+          <h1 data-page-node-id="ARZOtynxfMbEOkw3b2iojm">待确认</h1>
+          <p class="view-desc" data-page-node-id="6ap1U7O93yDva0LLNetI67">LLM 适配产物在确认前不会落盘安装。请核对改动清单（changelog）后决定。</p>
         </div>
       </header>
-      <div id="pending-list" data-page-node-id="rHTmYofaahGGQKazBOLYDV"><div class="loading" data-page-node-id="a8tn1W9z4Ab2Wr5mG2lZz0">加载中…</div></div>
+      <div id="pending-list" data-page-node-id="0vt9JEK8Z6vxLdUCpmsjfH"><div class="loading" data-page-node-id="ebDSW1AgYMHl41P9myRQAT">加载中…</div></div>
     </section>
 
     <!-- 发现视图（search 即审计） -->
-    <section id="view-discover" class="view" data-page-node-id="8ncQxGVZHfPzHDAQcZJkaT">
-      <header class="view-header" data-page-node-id="XqkOZwq09q0UtuEcCliyy0">
-        <div data-page-node-id="tY6DyFcFrpFmg0qdJuX4gX">
-          <h1 data-page-node-id="KZ674zgg05G92zA1wzVxYr">发现</h1>
-          <p class="view-desc" data-page-node-id="j36jhPRAkO9f0aX4bWawDH">搜索即审计：每个结果现场浅拉取并过静态安全门，标注分级后再决定是否安装。</p>
+    <section id="view-discover" class="view" data-page-node-id="pjruATNMOz4YnHsYzXRE4x">
+      <header class="view-header" data-page-node-id="MEMHyekzXvngLFWp8TFDJ8">
+        <div data-page-node-id="bjNleG4E1TJMrNjB9f8pwa">
+          <h1 data-page-node-id="bpFJ5FBKyEO9aSnCEQ7BxL">发现</h1>
+          <p class="view-desc" data-page-node-id="0vROX3mk7tX8EIpiadbFUT">搜索即审计：每个结果现场浅拉取并过静态安全门，标注分级后再决定是否安装。</p>
         </div>
-        <div class="header-actions" data-page-node-id="ErNAp5383F4YAIkxd26oPK">
-          <select id="discover-agent" class="select" data-page-node-id="Mll1IOPlEUIrCXZLhC5VN4">
-            <option value="claude-code" data-page-node-id="PJ1aHCkaFaZXNt2i3IBIWC">claude-code</option>
-            <option value="codex" data-page-node-id="yGRcTkVHU87BgLxIYMlOHA">codex</option>
-            <option value="gemini-cli" data-page-node-id="RJ2oGW98CMqBx2FbdyW19D">gemini-cli</option>
-            <option value="cursor" data-page-node-id="JPepH7jTTM5SNTFyHMDorv">cursor</option>
-            <option value="opencode" data-page-node-id="03N3GsCfgYiBFg5r7Jc1tL">opencode</option>
+        <div class="header-actions" data-page-node-id="tqgjvvWGUoPnx7LQxNAfOs">
+          <select id="discover-agent" class="select" data-page-node-id="mgVst49xchGH0Okvd5m2wa">
+            <option value="claude-code" data-page-node-id="b9BHudEmzHMEYANRvu2mrM">claude-code</option>
+            <option value="codex" data-page-node-id="4EoCG6U6J4Gw38DCf3QkwH">codex</option>
+            <option value="gemini-cli" data-page-node-id="NWLYvPxsbLAyHw7xN4EVQ0">gemini-cli</option>
+            <option value="cursor" data-page-node-id="oPnr2qBz6bqterL03YRQng">cursor</option>
+            <option value="opencode" data-page-node-id="mGnpaTDpWmbTlEA5dleu4C">opencode</option>
           </select>
         </div>
       </header>
-      <div class="search-bar" data-page-node-id="GriAj5t4cve78qZIbEIVs6">
-        <input id="discover-input" type="text" placeholder="关键词，如 pdf、github、log…" spellcheck="false" data-page-node-id="kpG0LwKuWCgprPlEDvN9YH">
-        <button id="btn-search" class="btn btn-primary" data-page-node-id="oe62XM36F9tTXnN8PlszGo">搜索并审计</button>
+      <div class="search-bar" data-page-node-id="pQp9IzXkm7rs2L8pmtZnGv">
+        <input id="discover-input" type="text" placeholder="关键词，如 pdf、github、log…" spellcheck="false" data-page-node-id="MMTBMIFKG56X3sexPKD7rn">
+        <button id="btn-search" class="btn btn-primary" data-page-node-id="sGty7ASEwmNcAOhkAN12YI">搜索并审计</button>
       </div>
-      <div id="discover-message" class="discover-message hidden" data-page-node-id="jjourN6ZlEd0z9dRadxQcI"></div>
-      <div id="discover-results" data-page-node-id="N65kQxJ4Vm5PAENfVMDinb"><div class="placeholder" data-page-node-id="dSgZXRfw9ucwL5cEb7V0cB">输入关键词开始搜索。</div></div>
+      <div id="discover-message" class="discover-message hidden" data-page-node-id="xKRyWovJiAYDo6f2TF0lpH"></div>
+      <div id="discover-results" data-page-node-id="uyFlRXea2kACNjSU9Ay66K"><div class="placeholder" data-page-node-id="nanztLTs4ODmyiUvhIbYMm">输入关键词开始搜索。</div></div>
     </section>
 
     <!-- 设置视图 -->
-    <section id="view-settings" class="view" data-page-node-id="Fjav2qm739wxMUBJOR3Lpi">
-      <header class="view-header" data-page-node-id="yKBIhHAhLeL2RGaPeS8i6R"><h1 data-page-node-id="eGjHEHf1CGHJ2DiaRNYtcs">设置</h1></header>
-      <div class="settings-box" data-page-node-id="Lhawp74tU8gWwc0IKbjZnV">
-        <h3 class="settings-h3" data-page-node-id="R9nr3EL2HUoqEQCYuzJ10n">Skills 扫描目录（每行一个）</h3>
+    <section id="view-settings" class="view" data-page-node-id="nGpZy9N7gdoeFGZJ8BPYo3">
+      <header class="view-header" data-page-node-id="NQVTdPhvHcxyaEYD2GArzs"><h1 data-page-node-id="jprfxXMj0ryKH0bFVitOUT">设置</h1></header>
+      <div class="settings-box" data-page-node-id="h3dL6KD0PNi4lAtRJV3J3C">
+        <h3 class="settings-h3" data-page-node-id="AG4NtukcDqSSW8ymB39Uwf">Skills 扫描目录（每行一个）</h3>
         <textarea id="roots-input" rows="4" spellcheck="false"></textarea>
-        <button id="btn-save-roots" class="btn btn-primary" data-page-node-id="mYB9SPTdSruMrzUeYBjtUI">保存</button>
+        <button id="btn-save-roots" class="btn btn-primary" data-page-node-id="A7QX7yQE82E1SkaMemVzgS">保存</button>
 
-        <h3 class="settings-h3" data-page-node-id="hPGJPTw1vQ0897LNcTOmoo">BYOK 模型（L2 适配，任意 OpenAI 兼容端点）</h3>
-        <div id="llm-status" class="llm-status" data-page-node-id="pFVpCO0eKjaADnXDOiVeEZ">检测中…</div>
-        <div class="llm-form" data-page-node-id="8hXZp7FJI5KGAvzmZlRRU7">
-          <label data-page-node-id="zdqtrWKxVNGe1tzBdxNAZM">Base URL <input id="llm-url" type="text" placeholder="https://api.openai.com/v1" spellcheck="false" data-page-node-id="GFom0WjZNWPfy7CMTWh764"></label>
-          <label data-page-node-id="aHHq3PX8iAlNOFwPZmeE6q">API Key <input id="llm-key" type="password" placeholder="sk-…" spellcheck="false" data-page-node-id="eE29I0jrikW3RtKxnF5NOe"></label>
-          <label data-page-node-id="2Es3ZMXu3w6hcNduna9Y6a">模型名 <input id="llm-model" type="text" placeholder="gpt-4o-mini / deepseek-chat / …" spellcheck="false" data-page-node-id="igin6RrLpxVSAEyMeoxfBy"></label>
-          <button id="btn-llm-save" class="btn btn-primary" data-page-node-id="VAlkDNl8qkROL0Hz7cR8Q8">保存并自动识别</button>
-          <button id="btn-llm-test" class="btn" data-page-node-id="WCHyIwn75tRpxyIbfbMCg8">重新探测</button>
+        <h3 class="settings-h3" data-page-node-id="o38jmtux8UmQKPJrk1JIO4">BYOK 模型（L2 适配，任意 OpenAI 兼容端点）</h3>
+        <div id="llm-status" class="llm-status" data-page-node-id="a9dzpfcnq1UXCWQCw4hDDT">检测中…</div>
+        <div class="llm-form" data-page-node-id="Rx0nEHU9EFptW1Ptj7P8HZ">
+          <label data-page-node-id="EuCFy4U1X1DIERbKDeRNgn">Base URL <input id="llm-url" type="text" placeholder="https://api.openai.com/v1" spellcheck="false" data-page-node-id="D5d7DukZyPG02kDUabwFGp"></label>
+          <label data-page-node-id="aydKbqrVinlPf2fZkEyNkp">API Key <input id="llm-key" type="password" placeholder="sk-…" spellcheck="false" data-page-node-id="it8Vg6o3W63C4F49lYxQ7U"></label>
+          <label data-page-node-id="cmDXZD3HnVTsT992PvUwa1">模型名 <input id="llm-model" type="text" placeholder="gpt-4o-mini / deepseek-chat / …" spellcheck="false" data-page-node-id="JURxJcQnhdYlzFRh1nmBld"></label>
+          <button id="btn-llm-save" class="btn btn-primary" data-page-node-id="x4500Q3pDwE7khKltYu0Ry">保存并自动识别</button>
+          <button id="btn-llm-test" class="btn" data-page-node-id="JDsodn6uojFGiNbnW2OKGt">重新探测</button>
         </div>
-        <div id="llm-probe" class="llm-probe hidden" data-page-node-id="R4LXk6YzE2CgheiWBzY1uE"></div>
-        <p class="settings-hint" data-page-node-id="lcQBDQnSN7CbMzv3uHHVt3">保存后自动探测端点（GET /models）并列出可用模型；探测不打消耗 token 的请求。密钥只进 LLM 请求，永不落库、不上锁文件。</p>
+        <div id="llm-probe" class="llm-probe hidden" data-page-node-id="KrujjBCzkgWNN9di96Ziol"></div>
+        <p class="settings-hint" data-page-node-id="SdEGro5FHFKOPBWeC2GUCx">保存后自动探测端点（GET /models）并列出可用模型；探测不打消耗 token 的请求。密钥只进 LLM 请求，永不落库、不上锁文件。</p>
       </div>
     </section>
   </main>
 </div>
 
 <!-- 适配详情抽屉 -->
-<div id="drawer-mask" class="drawer-mask hidden" data-page-node-id="RJVNA0JRimRZ7inNespR3k"></div>
-<aside id="drawer" class="drawer hidden" data-page-node-id="EJwWJbchU7b9gO3fS9oTJ2">
-  <header class="drawer-header" data-page-node-id="91VnSx19c9TK6KAnEJWBmh">
-    <h2 id="drawer-title" data-page-node-id="A1kvXcrVV3h4DeR3OsX9dH">适配详情</h2>
-    <button id="drawer-close" class="btn btn-icon" data-page-node-id="zoi7z1n0oudBG0Qbbsq8GH">✕</button>
+<div id="drawer-mask" class="drawer-mask hidden" data-page-node-id="WudZhwAtCT81wl84OEaYjx"></div>
+<aside id="drawer" class="drawer hidden" data-page-node-id="TbZjdtK22KlS0rMm1qXyrM">
+  <header class="drawer-header" data-page-node-id="YPwq2kK9LCb1zzSiazQZWb">
+    <h2 id="drawer-title" data-page-node-id="HyfDFsiahMo0Kyl3phh2Kz">适配详情</h2>
+    <button id="drawer-close" class="btn btn-icon" data-page-node-id="Yio7JE7wPOCZ4O0t1KyFFJ">✕</button>
   </header>
-  <div id="drawer-body" class="drawer-body" data-page-node-id="WNTJVJ1zeCHHYuuneQWcOv"></div>
+  <div id="drawer-body" class="drawer-body" data-page-node-id="KUmNFJy1eos4fxPsgKWkfj"></div>
 </aside>
 
-<div id="toast" class="toast hidden" data-page-node-id="ysTmTyaNG61Kr3lfgXeCOF"></div>
+<div id="toast" class="toast hidden" data-page-node-id="qRdBcvgqtQhMtDHTsTx36U"></div>
 <script src="app.js"></script>
 </body>
 </html>
