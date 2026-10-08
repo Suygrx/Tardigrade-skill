@@ -73,6 +73,11 @@ class InstallBody(BaseModel):
     agent: str
 
 
+class UninstallBody(BaseModel):
+    skill: str
+    agent: str
+
+
 def _find_demo_roots() -> list[Path]:
     import sys
 
@@ -232,6 +237,7 @@ def create_app() -> FastAPI:
             except DispatchError as e:
                 results.append({"skill": name, "ok": False, "message": str(e)})
                 continue
+            adapt_llm.record_install(name, body.agent, dest, source=f"apply:{d}")
             lock.record(build_entry(name, f"apply:{d}", d))
             results.append({"skill": name, "ok": True, "tier": judgment.tier, "dest": str(dest)})
         lock_path = lock.save(state["lock_root"])
@@ -307,6 +313,48 @@ def create_app() -> FastAPI:
     def search(body: SearchBody) -> dict:
         return discover.search_skills(body.query, limit=max(1, min(body.limit, 10)))
 
+    # ------------------------------------------------------------- home: installed per platform
+
+    @app.get("/api/installed")
+    def installed() -> dict:
+        """Per-platform listing of skills installed via Tardigrade (CC Switch home)."""
+        import os
+
+        all_installs = adapt_llm.list_installs()
+        out = []
+        for p in profiles.values():
+            items = []
+            for rec in all_installs:
+                if rec["agent"] != p.id:
+                    continue
+                dest = Path(rec["dest"])
+                present = dest.is_dir()
+                items.append({**rec, "present": present})
+            out.append({"agent": p.id, "name": p.name, "discovery": p.discovery, "skills": items})
+        return {"platforms": out}
+
+    @app.post("/api/uninstall")
+    def uninstall(body: UninstallBody) -> dict:
+        """Remove a managed install. Only dirs under the agent's own skills root are touched."""
+        from tardigrade_skill.dispatcher import target_dir
+
+        dest = adapt_llm.drop_install(body.skill, body.agent)
+        if dest is None:
+            raise HTTPException(404, f"no managed install for {body.skill} -> {body.agent}")
+        dest_path = Path(dest)
+        try:
+            root = target_dir(body.agent, project=False)
+            inside = str(dest_path.resolve()).startswith(str(root.expanduser().resolve()))
+        except Exception:
+            inside = False
+        if not inside:
+            return {"ok": False, "message": f"refusing: {dest} is not under the managed skills root"}
+        import shutil
+
+        if dest_path.is_dir():
+            shutil.rmtree(dest_path)
+        return {"ok": True, "removed": str(dest_path)}
+
     @app.post("/api/install")
     def install(body: InstallBody) -> dict:
         """Full audited install pipeline for remote/local sources (discovery -> platform)."""
@@ -348,6 +396,7 @@ def create_app() -> FastAPI:
                 except DispatchError as e:
                     results.append({"skill": d.name, "ok": False, "message": str(e)})
                     continue
+                adapt_llm.record_install(d.name, body.agent, dest, source=source_desc)
                 lock.record(build_entry(d.name, source_desc, d, resolved_sha=resolved_sha))
                 results.append({"skill": d.name, "ok": True, "tier": judgment.tier, "dest": str(dest)})
             lock_path = lock.save(state["lock_root"])

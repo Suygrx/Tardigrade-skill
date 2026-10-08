@@ -41,12 +41,90 @@ document.querySelectorAll(".nav-item").forEach((btn) => {
     document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
     btn.classList.add("active");
     $(`#view-${btn.dataset.view}`).classList.add("active");
+    if (btn.dataset.view === "home") loadHome();
     if (btn.dataset.view === "matrix") loadMatrix();
     if (btn.dataset.view === "skills") loadSkills();
     if (btn.dataset.view === "pending") loadPending();
     if (btn.dataset.view === "settings") loadSettings();
   });
 });
+
+/* ---------------- home (CC Switch style platform cards) ---------------- */
+const AGENT_META = {
+  "claude-code": { icon: "◈", color: "#d97757" },
+  "codex": { icon: "◉", color: "#10a37f" },
+  "gemini-cli": { icon: "✦", color: "#4285f4" },
+  "cursor": { icon: "▣", color: "#6b7280" },
+  "opencode": { icon: "⌘", color: "#8b5cf6" },
+};
+
+async function loadHome() {
+  const box = $("#home-grid");
+  box.innerHTML = '<div class="loading">加载中…</div>';
+  try {
+    const data = await api("/api/installed");
+    renderHome(data.platforms);
+  } catch (e) {
+    box.innerHTML = `<div class="loading">加载失败：${e.message}</div>`;
+  }
+}
+
+function renderHome(platforms) {
+  const box = $("#home-grid");
+  box.innerHTML = platforms
+    .map((p) => {
+      const meta = AGENT_META[p.agent] || { icon: "◆", color: "#6b7280" };
+      const rows = p.skills
+        .map(
+          (s) => `<div class="inst-row">
+            <span class="inst-dot ${s.present ? "" : "missing"}"></span>
+            <div class="inst-main">
+              <div class="inst-name">${s.skill}${s.present ? "" : ' <span class="chip" title="目录已不存在">缺失</span>'}</div>
+              <div class="inst-path" title="${s.dest}">${s.dest}</div>
+            </div>
+            <span class="inst-time">${(s.installed_at || "").slice(0, 10)}</span>
+            <button class="btn btn-icon" onclick="uninstallSkill('${s.skill}', '${p.agent}')">✕</button>
+          </div>`
+        )
+        .join("");
+      const body = rows ||
+        `<div class="inst-empty">还没有通过 Tardigrade 安装的 skill<br><span>去「发现」页搜索，或在「适配矩阵」应用已有 skill</span></div>`;
+      const count = p.skills.length;
+      return `<div class="platform-card">
+        <div class="pc-row">
+          <div class="pc-icon" style="color:${meta.color}"><span>${meta.icon}</span></div>
+          <div class="pc-title">
+            <h3>${p.name}</h3>
+            <div class="pc-sub">${p.agent} · ${p.discovery === "native-skills" ? "原生 skill 支持" : p.discovery === "resident-rules" ? "降级常驻 rules" : "无 skill 机制"}</div>
+          </div>
+          <span class="badge count-badge">${count} 个 skill</span>
+        </div>
+        <div class="pc-body">${body}</div>
+        <div class="pc-footer">
+          <button class="btn" onclick="switchView('matrix')">适配矩阵</button>
+          <button class="btn" onclick="switchView('discover')">发现更多</button>
+        </div>
+      </div>`;
+    })
+    .join("");
+}
+
+function switchView(name) {
+  document.querySelector(`.nav-item[data-view="${name}"]`).click();
+}
+
+async function uninstallSkill(skill, agent) {
+  try {
+    const r = await api("/api/uninstall", { skill, agent });
+    toast(r.ok ? `已卸载：${r.removed}` : r.message);
+    loadHome();
+  } catch (e) {
+    toast(`卸载失败：${e.message}`);
+  }
+}
+
+$("#btn-home-refresh").addEventListener("click", loadHome);
+$("#btn-go-discover").addEventListener("click", () => switchView("discover"));
 
 /* ---------------- health ---------------- */
 async function ping() {
@@ -474,6 +552,6 @@ $("#btn-save-roots").addEventListener("click", async () => {
 (async function boot() {
   await ping();
   try { SETTINGS = await api("/api/settings"); } catch (e) { /* keep defaults */ }
-  loadMatrix();
+  loadHome();
   refreshPendingCount();
 })();

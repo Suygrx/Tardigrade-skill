@@ -48,6 +48,15 @@ CREATE TABLE IF NOT EXISTS adaptations (
     changelog TEXT NOT NULL,
     notes TEXT NOT NULL DEFAULT '',
     UNIQUE(agent, source_hash)
+);
+CREATE TABLE IF NOT EXISTS installs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    skill TEXT NOT NULL,
+    agent TEXT NOT NULL,
+    dest TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT '',
+    installed_at TEXT NOT NULL,
+    UNIQUE(skill, agent)
 )
 """
 
@@ -296,6 +305,8 @@ def confirm_adaptation(adaptation_id: str, dispatch_fn) -> dict:
     except Exception as e:  # DispatchError and anything the caller raises
         return {"ok": False, "message": f"dispatch failed: {e}"}
 
+    record_install(data["skill"], data["agent"], dest, source="adaptation")
+
     conn = _db()
     try:
         conn.execute("UPDATE adaptations SET status='confirmed' WHERE id=?", (adaptation_id,))
@@ -326,3 +337,40 @@ def reset_store() -> None:
         DB_PATH.unlink()
     if ADAPTERS_DIR.exists():
         shutil.rmtree(ADAPTERS_DIR)
+
+
+# ------------------------------------------------------------------ install tracking
+
+
+def record_install(skill: str, agent: str, dest: Path, source: str = "") -> None:
+    conn = _db()
+    try:
+        conn.execute(
+            "INSERT OR REPLACE INTO installs (skill, agent, dest, source, installed_at) VALUES (?,?,?,?,?)",
+            (skill, agent, str(dest), source, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def list_installs() -> list[dict]:
+    conn = _db()
+    try:
+        rows = conn.execute("SELECT skill, agent, dest, source, installed_at FROM installs ORDER BY installed_at DESC")
+        return [dict(r) for r in rows.fetchall()]
+    finally:
+        conn.close()
+
+
+def drop_install(skill: str, agent: str) -> dict | None:
+    conn = _db()
+    try:
+        row = conn.execute("SELECT dest FROM installs WHERE skill=? AND agent=?", (skill, agent)).fetchone()
+        if row is None:
+            return None
+        conn.execute("DELETE FROM installs WHERE skill=? AND agent=?", (skill, agent))
+        conn.commit()
+        return row["dest"]
+    finally:
+        conn.close()

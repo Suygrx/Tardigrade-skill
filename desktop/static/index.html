@@ -18,7 +18,10 @@
       </div>
     </div>
     <nav data-page-node-id="25uzqZ9s03AuIPw6UgNm5I">
-      <button class="nav-item active" data-view="matrix" data-page-node-id="zX9zTjp89Uz7tHYE1i5CtN">
+      <button class="nav-item active" data-view="home">
+        <span class="nav-icon">⌂</span> 主页
+      </button>
+      <button class="nav-item" data-view="matrix" data-page-node-id="zX9zTjp89Uz7tHYE1i5CtN">
         <span class="nav-icon" data-page-node-id="OWIOmgvO98wiCnOZkNCjOn">▦</span> 适配矩阵
       </button>
       <button class="nav-item" data-view="skills" data-page-node-id="VnBdW0RZp1rtfUDYH7TK3R">
@@ -41,8 +44,23 @@
   </aside>
 
   <main id="main" data-page-node-id="m7mxl1Fw16CnvqpD0SDxr7">
+    <!-- 主页：平台卡片（CC Switch 风格） -->
+    <section id="view-home" class="view active">
+      <header class="view-header">
+        <div>
+          <h1>主页</h1>
+          <p class="view-desc">每个平台一张卡片，列出通过 Tardigrade 安装的 skill，一键管理。</p>
+        </div>
+        <div class="header-actions">
+          <button id="btn-home-refresh" class="btn">刷新</button>
+          <button id="btn-go-discover" class="btn btn-primary">去发现页安装</button>
+        </div>
+      </header>
+      <div id="home-grid" class="cards"><div class="loading">加载中…</div></div>
+    </section>
+
     <!-- 适配矩阵视图 -->
-    <section id="view-matrix" class="view active" data-page-node-id="L02aSYA3gnK0unyavSmiTO">
+    <section id="view-matrix" class="view" data-page-node-id="L02aSYA3gnK0unyavSmiTO">
       <header class="view-header" data-page-node-id="fHaM7sbcB4BGSC8U2QJ8jK">
         <div data-page-node-id="YdTVtATA3NCojIrkI9M2Vp">
           <h1 data-page-node-id="jK6m2BggEF7C6jYh0rcksd">适配矩阵</h1>
