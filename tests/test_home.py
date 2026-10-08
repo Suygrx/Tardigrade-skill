@@ -151,3 +151,35 @@ def test_library_delete_and_open_url(tmp_path: Path, isolated_store) -> None:
 
     # open-url only allows http/https
     assert c.post("/api/open-url", json={"url": "file:///C:/Windows"}).status_code == 400
+
+
+def test_uninstall_unmanaged_skill(tmp_path: Path, isolated_store, monkeypatch) -> None:
+    """非托管（本机已有）skill 也能统一管理卸载：按平台根目录定位删除。"""
+    import shutil as _shutil
+
+    import tardigrade_skill.dispatcher as dispatcher
+    from tardigrade_skill.dispatcher import target_dir
+
+    c = _client()
+    monkeypatch.setattr(
+        dispatcher, "target_dir",
+        lambda agent, project: tmp_path / "agents" / agent / ("project" if project else "global"),
+    )
+    fake_root = tmp_path / "agents" / "codex" / "global"
+    src = REPO / "demo" / "skills" / "pdf-helper"
+    dest = fake_root / "pdf-helper"
+    _shutil.copytree(src, dest)
+    assert dest.is_dir()
+    installed_rows = [i for p in c.get("/api/installed").json()["platforms"] for i in p["skills"] if i["skill"] == "pdf-helper"]
+    assert len(installed_rows) == 1 and installed_rows[0]["managed"] is False  # 无安装记录 -> 非托管
+
+    r = c.post("/api/uninstall", json={"skill": "pdf-helper", "agent": "codex"})
+    assert r.status_code == 200 and r.json()["ok"] is True
+    assert not dest.exists()
+
+    # 平台根外的路径拒绝（越权守卫）
+    outside = tmp_path / "outside"
+    _shutil.copytree(src, outside)
+    r2 = c.post("/api/uninstall", json={"skill": "outside", "agent": "codex"})
+    assert r2.status_code == 404
+    assert outside.exists()

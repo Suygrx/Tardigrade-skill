@@ -207,9 +207,12 @@ function metaOf(agent, fallbackName) {
 }
 
 /* 平台 logo（static/logos/<agent>.svg，透明背景；缺失时 img 回退隐藏由 CSS 兜底） */
+const PNG_LOGOS = new Set(["goose", "droid", "crush", "roo", "kilo", "iflow-cli", "workbuddy"]);
+
 function logoImg(agent, cls = "") {
   const short = metaOf(agent).short;
-  return `<img class="plat-logo ${cls}" src="logos/${agent}.svg" alt="${short}" title="${short}" onerror="this.classList.add('logo-missing')">`;
+  const ext = PNG_LOGOS.has(agent) ? "png" : "svg";
+  return `<img class="plat-logo ${cls}" src="logos/${agent}.${ext}" alt="${short}" title="${short}" onerror="this.classList.add('logo-missing')">`;
 }
 
 function visiblePlatforms() {
@@ -300,7 +303,7 @@ function renderHome() {
           ? `<span class="prov-when">⏱ ${when}</span><span class="prov-ok">✓ 在位</span>`
           : `<span class="prov-when">检测于本机</span>`;
       const state = s.managed && s.present && latest && s.installed_at === latest ? "state-current" : (!s.present ? "state-missing" : "");
-      const uninstallBtn = s.managed
+      const uninstallBtn = s.present
         ? `<button class="prov-uninstall" onclick="uninstallSkill('${s.skill}', '${SELECTED_PLATFORM}')">卸载</button>`
         : "";
       return `<div class="prov-card ${state}">
@@ -380,20 +383,16 @@ async function loadManage() {
 function buildManageRows() {
   const rows = new Map();
   for (const s of LIBRARY.skills) {
-    rows.set(s.name, { name: s.name, desc: s.description || "", dir: s.dir, tag: "库", external: false, enabled: {}, externalEnabled: {} });
+    rows.set(s.name, { name: s.name, dir: s.dir, inLib: true, enabled: {} });
   }
   for (const p of INSTALLED.platforms) {
     for (const s of p.skills) {
       let row = rows.get(s.skill);
       if (!row) {
-        row = { name: s.skill, desc: "", dir: s.dest, tag: s.managed ? "已启用" : "本机", external: !s.managed, enabled: {}, externalEnabled: {} };
+        row = { name: s.skill, dir: s.dest, inLib: false, enabled: {} };
         rows.set(s.skill, row);
       }
-      if (s.present) {
-        row.enabled[p.agent] = true;
-        if (!s.managed) row.externalEnabled[p.agent] = true;
-      }
-      if (!row.desc && !s.managed) row.tag = "本机";
+      if (s.present) row.enabled[p.agent] = true;
     }
   }
   MANAGE.rows = [...rows.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -431,19 +430,17 @@ function renderManage() {
           .map((p) => {
             const meta = metaOf(p.agent, p.name);
             const on = !!r.enabled[p.agent];
-            const ext = !!(r.externalEnabled && r.externalEnabled[p.agent]);
             return `<button class="plat-toggle ${on ? "on" : ""}" data-skill="${r.name}" data-agent="${p.agent}"
-              title="${meta.short}${on ? "：已开启" : "：未开启"}${ext ? "（本机已有，非 Tardigrade 管理）" : ""}"
+              title="${meta.short}${on ? "：已开启（点击关闭）" : "：未开启（点击开启）"}"
               style="--pc:${meta.color}">${logoImg(p.agent)}</button>`;
           })
           .join("");
         return `<div class="mg-row">
           <div class="mg-row-main">
-            <div class="prov-title-row"><span class="mg-name" data-dir="${r.dir}" title="查看 SKILL.md">${r.name}</span>
-              <span class="prov-pill pill-matrix">${r.tag}</span></div>
-            <div class="mg-desc">${(r.desc || "—").slice(0, 120)}</div>
+            <div class="prov-title-row"><span class="mg-name" data-dir="${r.dir}" title="查看 SKILL.md">${r.name}</span></div>
+            <div class="mg-path" title="${r.dir}">${r.dir}</div>
           </div>
-          <div class="mg-icons">${icons}${r.tag === "库" ? `<button class="mg-del" data-skill="${r.name}" title="从本地 Skill 库删除">✕</button>` : ""}</div>
+          <div class="mg-icons">${icons}${r.inLib ? `<button class="mg-del" data-skill="${r.name}" title="从本地 Skill 库删除">✕</button>` : ""}</div>
         </div>`;
       }).join("") + `</div>`
     : `<div class="prov-empty">没有匹配的 skill</div>`;
@@ -475,7 +472,6 @@ async function togglePlatform(skill, agent) {
   if (!row) return;
   const pname = metaOf(agent).short;
   if (row.enabled[agent]) {
-    if (row.externalEnabled && row.externalEnabled[agent]) return toast("本机已有的 skill，非 Tardigrade 管理，请在该平台手动处理");
     if (!(await ask(`确定在 ${pname} 上关闭（卸载）「${skill}」？`))) return;
     try {
       const r = await api("/api/uninstall", { skill, agent });

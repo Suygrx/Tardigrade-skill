@@ -588,3 +588,17 @@ table.matrix td.skill-name .dir { max-width: 260px; overflow: hidden; text-overf
 .md-table th { background: var(--muted); color: var(--fg); font-weight: 600; text-align: left; }
 .md-table th, .md-table td { border: 1px solid var(--border); padding: 6px 10px; }
 .md-table tr:nth-child(even) td { background: rgba(255, 255, 255, 0.02); }
+
+/* ============================================================
+   logo 提亮（深色背景可读性）
+   ============================================================ */
+.plat-logo { filter: brightness(1.35) saturate(1.15) drop-shadow(0 0 4px rgba(255, 255, 255, 0.12)); }
+.plat-toggle.on .plat-logo { filter: brightness(1.5) saturate(1.2); }
+.plat-logo.logo-missing { display: none; }
+
+/* 管理页：名字下方显示本机位置 */
+.mg-path {
+  font-size: 11.5px; color: var(--muted-fg); margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: Consolas, monospace; opacity: 0.85;
+}

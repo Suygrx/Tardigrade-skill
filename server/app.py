@@ -593,12 +593,20 @@ def create_app() -> FastAPI:
 
     @app.post("/api/uninstall")
     def uninstall(body: UninstallBody) -> dict:
-        """Remove a managed install. Only dirs under the agent's own skills root are touched."""
+        """Remove a skill from a platform (managed or not). Only dirs under the agent's own skills root are touched."""
         from tardigrade_skill.dispatcher import target_dir
 
         dest = adapt_llm.drop_install(body.skill, body.agent)
         if dest is None:
-            raise HTTPException(404, f"no managed install for {body.skill} -> {body.agent}")
+            # 非托管（本机已有）skill：统一管理 —— 在平台 skills 根目录下按名定位后删除
+            try:
+                root = target_dir(body.agent, project=False).expanduser().resolve()
+            except Exception as e:
+                raise HTTPException(400, f"cannot resolve skills root for '{body.agent}': {e}")
+            candidate = (root / body.skill).resolve()
+            if root not in candidate.parents or not (candidate / "SKILL.md").is_file():
+                raise HTTPException(404, f"'{body.skill}' not found under {root} (or not a valid skill dir)")
+            dest = str(candidate)
         dest_path = Path(dest)
         try:
             root = target_dir(body.agent, project=False)
