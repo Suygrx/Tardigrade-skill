@@ -170,7 +170,6 @@ function setView(name) {
 
   if (name === "home") loadHome();
   if (name === "manage") loadManage();
-  if (name === "discover") populateAgentSelect();
 }
 
 document.querySelectorAll("[data-view]").forEach((btn) => {
@@ -260,20 +259,9 @@ async function loadHome() {
     INSTALLED = await api("/api/installed");
     renderPlatformPill();
     renderHome();
-    populateAgentSelect();
   } catch (e) {
     box.innerHTML = `<div class="loading">加载失败：${e.message}</div>`;
   }
-}
-
-function populateAgentSelect() {
-  if (!INSTALLED) return;
-  const sel = $("#discover-agent");
-  const current = sel.value;
-  sel.innerHTML = INSTALLED.platforms
-    .map((p) => `<option value="${p.agent}">${p.name}</option>`)
-    .join("");
-  if (INSTALLED.platforms.some((p) => p.agent === current)) sel.value = current;
 }
 
 function renderHome() {
@@ -907,22 +895,30 @@ async function downloadToLibrary(source, btn) {
   }
 }
 
-$("#btn-import").addEventListener("click", async () => {
-  const p = $("#import-path").value.trim();
+/* Skills 管理：导入本地 skill（折叠输入行） */
+$("#btn-mg-import").addEventListener("click", () => {
+  $("#mg-import-row").classList.toggle("hidden");
+  if (!$("#mg-import-row").classList.contains("hidden")) $("#mg-import-path").focus();
+});
+
+$("#btn-mg-import-go").addEventListener("click", async () => {
+  const p = $("#mg-import-path").value.trim();
   if (!p) return toast("请先填写本地 skill 目录路径");
-  const btn = $("#btn-import");
+  const btn = $("#btn-mg-import-go");
   btn.disabled = true; btn.textContent = "审计中…";
-  const box = $("#discover-message");
+  const box = $("#mg-import-message");
   try {
     const r = await api("/api/import", { path: p });
-    box.textContent = `✓ 审计${r.audit.badge === "pass" ? "通过" : "有发现（" + r.audit.detail + "）"}：已导入 ${r.skill} 到 Skill 库（${r.dir}）`;
+    box.textContent = `✓ 审计${r.audit.badge === "pass" ? "通过" : "有发现（" + r.audit.detail + "）"}：已导入 ${r.skill} 到 Skill 库（${r.dir}），可在下方按平台开启`;
     box.classList.remove("hidden");
     toast(`已导入：${r.skill}`);
+    $("#mg-import-path").value = "";
+    loadManage();
   } catch (e) {
     box.textContent = `导入失败：${e.message}`;
     box.classList.remove("hidden");
   } finally {
-    btn.disabled = false; btn.textContent = "导入到 Skill 库";
+    btn.disabled = false; btn.textContent = "审计并导入";
   }
 });
 

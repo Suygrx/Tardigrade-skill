@@ -45,6 +45,15 @@
 
     <!-- ── Skills 库：本机全部 skill × 平台开关 ── -->
     <div id="mg-skills" class="mg-pane active" data-page-node-id="M7MXxrEuwcW7YPdtDUVvm4">
+      <div class="mg-toolbar">
+        <button id="btn-mg-import" class="btn">导入本地 skill</button>
+        <span class="view-desc">导入会先安全审计（CRITICAL 拦截），然后落入本地 Skill 库</span>
+      </div>
+      <div id="mg-import-row" class="search-bar hidden">
+        <input id="mg-import-path" type="text" placeholder="填写含 SKILL.md 的目录绝对路径，如 D:\my-skills\pdf-tools" spellcheck="false">
+        <button id="btn-mg-import-go" class="btn btn-primary">审计并导入</button>
+      </div>
+      <div id="mg-import-message" class="discover-message hidden"></div>
       <div id="mg-chips" class="mg-chips" data-page-node-id="uULCXEBeFIvenNV3tJA7mG"></div>
       <div class="search-bar" data-page-node-id="NSaVh47fsKO8EXWGt5VJeE">
         <input id="mg-search" type="text" placeholder="搜索已安装技能的名称、描述或仓库…" spellcheck="false" data-page-node-id="0zK1G54LBboNAuQBkFKUIP">
@@ -112,18 +121,11 @@
   <!-- 市场（搜索 + 本地导入） -->
   <section id="view-discover" class="view" data-page-node-id="K25gdn9YxhuRzLiS5fXdRR">
     <div class="view-toolbar" data-page-node-id="OWyY9rqbayXoKFwZL9kM0l">
-      <span class="view-desc" data-page-node-id="wxxxHVO8INurFIXqCd8wJW">搜索即审计：GitHub + skills.sh 双源检索，点击安装会先下载到本地 Skill 库（再到 Skills 管理里按平台开启）</span>
-      <div class="header-actions" data-page-node-id="w1bLAocStPy1AqIoY2JjkP">
-        <select id="discover-agent" class="select" data-page-node-id="lXpMXT8SNs1e4AcwRYfP3C"></select>
-      </div>
+      <span class="view-desc" data-page-node-id="wxxxHVO8INurFIXqCd8wJW">搜索即审计：GitHub + skills.sh 双源检索，统一下载到本地 Skill 库，适配哪个平台由 Skills 管理里按需开启</span>
     </div>
     <div class="search-bar" data-page-node-id="JlFh06Zhof0syWnP00iATs">
       <input id="discover-input" type="text" placeholder="关键词，如 pdf、github、log…" spellcheck="false" data-page-node-id="OrRsDf4RXDWcGkSHnzG6xL">
       <button id="btn-search" class="btn btn-primary" data-page-node-id="fe6093U11aE52WpnWgALZb">搜索并审计</button>
-    </div>
-    <div class="search-bar" data-page-node-id="b2F8cpAaDn2Wa6wcurK7f4">
-      <input id="import-path" type="text" placeholder="导入本地 skill：填写含 SKILL.md 的目录绝对路径，如 D:\my-skills\pdf-tools" spellcheck="false" data-page-node-id="b34K7EA2pRvmCn0zZCEJuH">
-      <button id="btn-import" class="btn" data-page-node-id="1Fzv0in1Ji0K0S8zbyvqTN">导入到 Skill 库</button>
     </div>
     <div id="discover-message" class="discover-message hidden" data-page-node-id="iOVQZxUo9jCIs6Ffp5CSHH"></div>
     <div id="discover-results" data-page-node-id="Ea0KkQsfSZrcvhbWCRPaC4"><div class="placeholder" data-page-node-id="XKCksmQo0d3BWxZbFVPsmL">输入关键词开始搜索。</div></div>
