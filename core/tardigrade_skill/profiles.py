@@ -48,4 +48,8 @@ def load_profiles(profiles_dir: Path) -> dict[str, PlatformProfile]:
 
 
 def default_profiles_dir() -> Path:
+    import sys
+
+    if getattr(sys, "frozen", False):  # PyInstaller: bundled as <_MEIPASS>/profiles
+        return Path(getattr(sys, "_MEIPASS")) / "profiles"
     return Path(__file__).resolve().parents[2] / "profiles"

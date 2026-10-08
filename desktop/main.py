@@ -3,10 +3,15 @@
 Lifecycle: start uvicorn on a free localhost port first, then open the pywebview
 window pointed at it; when the window closes, shut the server down gracefully.
 If pywebview is unavailable, fall back to the default browser (dev mode).
+
+Environment overrides (CI / headless smoke tests):
+- TARDIGRADE_PORT      fixed port instead of a random free one
+- TARDIGRADE_HEADLESS  "1" = serve only, never open a window/browser
 """
 
 from __future__ import annotations
 
+import os
 import socket
 import threading
 import webbrowser
@@ -18,6 +23,9 @@ from server.app import create_app
 
 
 def _free_port() -> int:
+    override = os.environ.get("TARDIGRADE_PORT")
+    if override:
+        return int(override)
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
@@ -35,18 +43,25 @@ def main() -> None:
     url = f"http://127.0.0.1:{port}"
     _wait_ready(url)
 
-    try:
-        import webview  # pywebview
-
-        webview.create_window("Tardigrade-skill", url, width=1180, height=760, min_size=(960, 640))
-        webview.start()
-    except ImportError:
-        print(f"pywebview not installed — dev fallback: opening {url} in your browser. Ctrl+C to quit.")
-        webbrowser.open(url)
+    if os.environ.get("TARDIGRADE_HEADLESS") == "1":
+        print(f"tardigrade-skill serving (headless) at {url}", flush=True)
         try:
             thread.join()
         except KeyboardInterrupt:
             pass
+    else:
+        try:
+            import webview  # pywebview
+
+            webview.create_window("Tardigrade-skill", url, width=1180, height=760, min_size=(960, 640))
+            webview.start()
+        except ImportError:
+            print(f"pywebview not installed — dev fallback: opening {url} in your browser. Ctrl+C to quit.")
+            webbrowser.open(url)
+            try:
+                thread.join()
+            except KeyboardInterrupt:
+                pass
 
     server.should_exit = True
     thread.join(timeout=5)

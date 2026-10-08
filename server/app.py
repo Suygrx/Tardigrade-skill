@@ -74,9 +74,21 @@ class InstallBody(BaseModel):
 
 
 def _find_demo_roots() -> list[Path]:
+    import sys
+
+    if getattr(sys, "frozen", False):  # bundled app: no demo dir, roots come from settings
+        return []
     repo = Path(__file__).resolve().parents[1]
     demo = repo / "demo" / "skills"
     return [demo] if demo.is_dir() else []
+
+
+def _static_dir() -> Path:
+    import sys
+
+    if getattr(sys, "frozen", False):  # PyInstaller: bundled as <_MEIPASS>/static
+        return Path(getattr(sys, "_MEIPASS")) / "static"
+    return Path(__file__).resolve().parents[1] / "desktop" / "static"
 
 
 def create_app() -> FastAPI:
@@ -343,7 +355,7 @@ def create_app() -> FastAPI:
 
     # ------------------------------------------------------------- static frontend
 
-    static_dir = Path(__file__).resolve().parents[1] / "desktop" / "static"
+    static_dir = _static_dir()
     if static_dir.is_dir():
         app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
 

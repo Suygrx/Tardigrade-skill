@@ -240,3 +240,5 @@ table.changelog { width: 100%; border-collapse: collapse; font-size: 12px; margi
 .badge.badge-findings { color: var(--adapted); background: var(--adapted-bg); }
 .badge.badge-blocked { color: var(--incompatible); background: var(--incompatible-bg); }
 .badge.badge-skipped { color: var(--partial); background: var(--partial-bg); }
+
+.brand-logo img { width: 100%; height: 100%; border-radius: 9px; object-fit: cover; display: block; }
