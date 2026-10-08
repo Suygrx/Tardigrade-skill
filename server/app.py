@@ -12,6 +12,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from tardigrade_skill import adapt_llm
+from tardigrade_skill import llm as llm_module
 from tardigrade_skill.adapt import judge_skill
 from tardigrade_skill.audit import run_audit
 from tardigrade_skill.dispatcher import DispatchError, dispatch
@@ -42,6 +44,15 @@ class ApplyBody(BaseModel):
 
 class SettingsBody(BaseModel):
     roots: list[str]
+
+
+class AdaptBody(BaseModel):
+    skill: str
+    agent: str
+
+
+class AdaptationIdBody(BaseModel):
+    id: str
 
 
 def _find_demo_roots() -> list[Path]:
@@ -206,6 +217,40 @@ def create_app() -> FastAPI:
     def set_settings(body: SettingsBody) -> dict:
         state["roots"] = body.roots
         return {"roots": state["roots"]}
+
+    # ------------------------------------------------------------- L2 adaptation (BYOK)
+
+    @app.get("/api/llm-status")
+    def llm_status() -> dict:
+        cfg = llm_module.load_model_config()
+        return {"configured": cfg is not None, **(cfg.public_view() if cfg else {})}
+
+    @app.post("/api/adapt")
+    def adapt(body: AdaptBody) -> dict:
+        if body.agent not in profiles:
+            raise HTTPException(400, f"unknown agent '{body.agent}'")
+        skill_dirs = {d.name: d for d in _scan_skills(_roots_or_400(None))}
+        d = skill_dirs.get(body.skill)
+        if d is None:
+            raise HTTPException(404, f"skill '{body.skill}' not found in roots")
+        judgment = judge_skill(d, profiles[body.agent])
+        if judgment.tier != "adapted":
+            raise HTTPException(400, f"tier is '{judgment.tier}', only 'adapted' cells run the LLM engine")
+        result = adapt_llm.adapt_skill(d, profiles[body.agent])
+        result["judgment"] = judgment.to_dict()
+        return result
+
+    @app.get("/api/adaptations")
+    def adaptations(status: str | None = None) -> dict:
+        return {"adaptations": adapt_llm.list_adaptations(status)}
+
+    @app.post("/api/adaptations/confirm")
+    def adaptations_confirm(body: AdaptationIdBody) -> dict:
+        return adapt_llm.confirm_adaptation(body.id, dispatch_fn=dispatch)
+
+    @app.post("/api/adaptations/reject")
+    def adaptations_reject(body: AdaptationIdBody) -> dict:
+        return adapt_llm.reject_adaptation(body.id)
 
     # ------------------------------------------------------------- static frontend
 
