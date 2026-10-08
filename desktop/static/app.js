@@ -20,7 +20,7 @@ const VIEW_TITLES = {
   matrix: "适配矩阵",
   skills: "Skills",
   pending: "待确认",
-  discover: "发现",
+  discover: "市场",
   settings: "设置",
 };
 
@@ -129,7 +129,7 @@ function renderHome() {
   const meta = AGENT_META[SELECTED_PLATFORM] || { icon: "◆", color: "#9ca3af" };
   if (!p.skills.length) {
     box.innerHTML = `<div class="prov-empty">该平台还没有通过 Tardigrade 安装的 skill<br>
-      <span style="color:var(--muted-fg);font-size:12px">点右上角 <span style="color:var(--orange)">＋</span> 去发现页搜索安装，或在「适配矩阵」应用已有 skill</span></div>`;
+      <span style="color:var(--muted-fg);font-size:12px">点右上角 <span style="color:var(--orange)">＋</span> 去「市场」搜索安装，或在「适配矩阵」应用已有 skill</span></div>`;
     return;
   }
   // cc-switch 语义：当前启用的供应商高亮 emerald → 对应最近安装且仍在位的 skill
@@ -548,7 +548,7 @@ function renderDiscover(results, cached) {
         .join("");
       return `<div class="repo-card">
         <div class="rc-head">
-          <h3><a href="${r.html_url}" target="_blank" rel="noopener">${r.full_name}</a> ★${r.stars}${cached ? " <span style='color:var(--muted-fg);font-size:11px'>(缓存)</span>" : ""}</h3>
+          <h3><a href="${r.html_url}" target="_blank" rel="noopener">${r.full_name}</a> ★${r.stars ?? 0}${r.installs ? ` · ⬇${r.installs.toLocaleString()} 安装` : ""}${cached ? " <span style='color:var(--muted-fg);font-size:11px'>(缓存)</span>" : ""}</h3>
           <span class="badge ${cls}">${label} ${r.audit.detail || ""}</span>
         </div>
         <div class="rc-meta">${r.description || ""}</div>

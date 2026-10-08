@@ -1,8 +1,13 @@
 """Discovery: search = audit (doc §24).
 
-GitHub topic aggregation (claude-skill / agent-skills / cursor-rules) ranked by
-stars, then each top result is shallow-fetched (zipball) and run through the
-static audit gate on the spot. Results carry an audit badge:
+Sources, merged and deduped by repo:
+- GitHub topic aggregation (claude-skill / agent-skills / cursor-rules),
+  ranked by stars
+- skills.sh (Vercel's open skills directory) install-telemetry search,
+  which maps skill entries back to their GitHub repos
+
+Each top result is shallow-fetched (zipball) and run through the static
+audit gate on the spot. Results carry an audit badge:
 pass / findings(HIGH=n, LOW=m) / blocked(CRITICAL=n) / skipped.
 
 Quota exhaustion or offline -> degrade to un-audited listing with a hint to run
@@ -22,6 +27,7 @@ from .audit import run_audit
 from .installer import find_skill_dirs
 
 SEARCH_TOPICS = ("claude-skill", "agent-skills", "cursor-rules")
+SKILLS_SH_SEARCH_URL = "https://skills.sh/api/search"
 CACHE_PATH = Path("~/.tardigrade/search-cache.json").expanduser()
 CACHE_TTL = 24 * 3600
 HTTP_TIMEOUT = httpx.Timeout(30.0)
@@ -89,6 +95,60 @@ def audit_remote_repo(full_name: str, workdir: Path) -> dict:
         zip_path.unlink(missing_ok=True)
 
 
+def _skills_sh_search(query: str) -> dict[str, dict]:
+    """skills.sh (Vercel) open skills directory — install-telemetry search.
+
+    Entries are per-skill ({source: "owner/repo", name, installs}); they are
+    aggregated back to repos. Best-effort: any failure -> {} and the search
+    silently degrades to GitHub-topic-only.
+    """
+    try:
+        resp = httpx.get(
+            SKILLS_SH_SEARCH_URL,
+            params={"q": query},
+            headers={"User-Agent": "tardigrade-skill"},
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.status_code != 200:
+            return {}
+        entries = resp.json().get("skills") or []
+    except (httpx.HTTPError, ValueError):
+        return {}
+    repos: dict[str, dict] = {}
+    for e in entries:
+        full_name = e.get("source")
+        if not full_name or "/" not in full_name:
+            continue
+        rec = repos.setdefault(
+            full_name,
+            {
+                "full_name": full_name,
+                "html_url": f"https://github.com/{full_name}",
+                "installs": 0,
+                "sh_skills": [],
+            },
+        )
+        rec["installs"] += int(e.get("installs") or 0)
+        if e.get("name") and len(rec["sh_skills"]) < 3:
+            rec["sh_skills"].append(e["name"])
+    return repos
+
+
+def _gh_repo_meta(full_name: str) -> dict:
+    """Best-effort GitHub repo metadata for skills.sh-only results."""
+    try:
+        resp = _gh_get(f"https://api.github.com/repos/{full_name}")
+        if resp.status_code == 200:
+            item = resp.json()
+            return {
+                "stars": item.get("stargazers_count", 0),
+                "description": (item.get("description") or "")[:160],
+            }
+    except httpx.HTTPError:
+        pass
+    return {"stars": 0, "description": ""}
+
+
 def search_skills(query: str, limit: int = 5, use_cache: bool = True) -> dict:
     """Search by keyword across the skill topics; audit the top `limit` repos."""
     query = query.strip()
@@ -128,10 +188,22 @@ def search_skills(query: str, limit: int = 5, use_cache: bool = True) -> dict:
                     "html_url": item["html_url"],
                     "stars": item.get("stargazers_count", 0),
                     "description": (item.get("description") or "")[:160],
+                    "installs": 0,
+                    "sh_skills": [],
                 },
             )
 
-    ranked = sorted(repos.values(), key=lambda r: -r["stars"])[:limit]
+    # 第二数据源：skills.sh 安装量遥测（Vercel 开放 skills 目录）
+    for full_name, rec in _skills_sh_search(query).items():
+        if full_name in repos:
+            repos[full_name]["installs"] = rec["installs"]
+            repos[full_name]["sh_skills"] = rec["sh_skills"]
+        else:
+            meta = _gh_repo_meta(full_name)
+            repos[full_name] = {**rec, **meta}
+
+    # 排序：安装量是"真实在用"的信号，权重高于星标
+    ranked = sorted(repos.values(), key=lambda r: -(r.get("stars", 0) + 2 * r.get("installs", 0)))[:limit]
 
     results = []
     offline = False

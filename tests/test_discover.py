@@ -78,6 +78,7 @@ def _fake_gh_search(monkeypatch, repos_by_topic: dict[str, list[dict]]) -> None:
         return httpx.Response(200, json={"items": items}, request=httpx.Request("GET", url))
 
     monkeypatch.setattr(discover, "_gh_get", fake_get)
+    monkeypatch.setattr(discover, "_skills_sh_search", lambda q: {})
 
 
 def test_search_merges_topics_ranks_by_stars_and_audits(tmp_path: Path, monkeypatch) -> None:
@@ -100,6 +101,45 @@ def test_search_merges_topics_ranks_by_stars_and_audits(tmp_path: Path, monkeypa
     assert r["degraded"] is False
 
 
+def test_search_merges_skills_sh_installs(tmp_path: Path, monkeypatch) -> None:
+    discover.CACHE_PATH = tmp_path / "cache.json"
+    _fake_gh_search(monkeypatch, {"claude-skill": []})  # GitHub topic 侧为空
+    monkeypatch.setattr(
+        discover,
+        "_skills_sh_search",
+        lambda q: {
+            "anthropics/skills": {
+                "full_name": "anthropics/skills",
+                "html_url": "https://github.com/anthropics/skills",
+                "installs": 206964,
+                "sh_skills": ["pdf", "docx"],
+            },
+            "vercel-labs/json-render": {
+                "full_name": "vercel-labs/json-render",
+                "html_url": "https://github.com/vercel-labs/json-render",
+                "installs": 1200,
+                "sh_skills": ["react-pdf"],
+            },
+        },
+    )
+    monkeypatch.setattr(
+        discover,
+        "_gh_repo_meta",
+        lambda fn: {"stars": 5000, "description": "official skills"},
+    )
+    monkeypatch.setattr(
+        discover,
+        "audit_remote_repo",
+        lambda name, wd: {"badge": "pass", "detail": "", "skills": []},
+    )
+
+    r = discover.search_skills("pdf", limit=2, use_cache=False)
+    assert [x["full_name"] for x in r["results"]] == ["anthropics/skills", "vercel-labs/json-render"]
+    top = r["results"][0]
+    assert top["installs"] == 206964 and top["sh_skills"] == ["pdf", "docx"]
+    assert top["stars"] == 5000  # enriched via GitHub repo metadata
+
+
 def test_search_cache_hit_skips_network(tmp_path: Path, monkeypatch) -> None:
     discover.CACHE_PATH = tmp_path / "cache.json"
     cache = {"pdf": {"ts": __import__("time").time(), "payload": {"results": [{"full_name": "cached/repo"}], "rate_limited": False, "degraded": False, "message": ""}}}
@@ -120,6 +160,7 @@ def test_search_rate_limit_degrades_to_unaudited(tmp_path: Path, monkeypatch) ->
         return httpx.Response(403, json={}, request=httpx.Request("GET", url))
 
     monkeypatch.setattr(discover, "_gh_get", forbidden)
+    monkeypatch.setattr(discover, "_skills_sh_search", lambda q: {})
     r = discover.search_skills("pdf", use_cache=False)
     assert r["rate_limited"] is True and r["degraded"] is True
     assert "手动" in r["message"]
