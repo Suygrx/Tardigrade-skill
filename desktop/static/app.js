@@ -406,11 +406,10 @@ function renderManage() {
   );
 
   const q = MANAGE.q.trim().toLowerCase();
-  const rows = MANAGE.rows.filter(
-    (r) =>
-      (!MANAGE.filter || r.enabled[MANAGE.filter]) &&
-      (!q || r.name.toLowerCase().includes(q) || (r.desc || "").toLowerCase().includes(q))
-  );
+  const matchQ = (r) => !q || r.name.toLowerCase().includes(q) || r.dir.toLowerCase().includes(q);
+  // 搜索时忽略平台过滤（否则刚下载、尚未在任何平台开启的 skill 会被平台芯片隐藏）
+  const rows = MANAGE.rows.filter((r) => (q ? matchQ(r) : !MANAGE.filter || r.enabled[MANAGE.filter]));
+  const hiddenByFilter = q && MANAGE.filter ? MANAGE.rows.filter((r) => matchQ(r) && !r.enabled[MANAGE.filter]).length : 0;
 
   $("#mg-list").innerHTML = rows.length
     ? `<div class="mg-rows">` + rows.map((r) => {
@@ -430,8 +429,8 @@ function renderManage() {
           </div>
           <div class="mg-icons">${icons}<button class="mg-del" data-skill="${r.name}" title="删除（本地库 + 已开启的平台）">✕</button></div>
         </div>`;
-      }).join("") + `</div>`
-    : `<div class="prov-empty">没有匹配的 skill</div>`;
+      }).join("") + `</div>` + (hiddenByFilter ? `<div class="prov-empty">另有 ${hiddenByFilter} 个匹配的 skill 被平台过滤隐藏（尚未在任何平台开启）——<span class="mg-clear-filter" style="color:var(--primary);cursor:pointer">清除平台过滤</span></div>` : "")
+    : `<div class="prov-empty">${hiddenByFilter ? `共找到 ${hiddenByFilter} 个匹配的 skill，但都被平台过滤隐藏（尚未开启）——<span class="mg-clear-filter" style="color:var(--primary);cursor:pointer">清除平台过滤</span>` : "没有匹配的 skill"}</div>`;
 
   $("#mg-list").querySelectorAll(".plat-toggle").forEach((b) =>
     b.addEventListener("click", () => togglePlatform(b.dataset.skill, b.dataset.agent))
@@ -441,6 +440,9 @@ function renderManage() {
   );
   $("#mg-list").querySelectorAll(".mg-del").forEach((b) =>
     b.addEventListener("click", () => deleteLibrarySkill(b.dataset.skill))
+  );
+  $("#mg-list").querySelectorAll(".mg-clear-filter").forEach((n) =>
+    n.addEventListener("click", () => { MANAGE.filter = null; renderManage(); })
   );
 }
 
@@ -898,8 +900,12 @@ async function downloadToLibrary(source, btn) {
     const r = await api("/api/download", { source: `${source}.git` });
     const ok = r.results.filter((x) => x.ok).length;
     const blocked = r.results.filter((x) => !x.ok);
-    toast(`已下载 ${ok} 个 skill 到本地库${blocked.length ? `（${blocked.length} 个被审计拦截）` : ""}`);
-    if (btn) btn.textContent = "✓ 已入库";
+    if (!ok) {
+      toast(blocked.length ? `下载失败：${blocked.length} 个全部被审计拦截（${(blocked[0].audit && blocked[0].audit.detail) || "详见审计详情"}）` : "下载失败：仓库里没有找到可用 skill");
+      return;
+    }
+    toast(`已下载 ${ok} 个 skill 到本地库${blocked.length ? `（${blocked.length} 个被审计拦截）` : ""}，到「Skills 管理」开启`);
+    if (btn) btn.textContent = `✓ 已入库（${ok}）`;
   } catch (e) {
     toast(`下载失败：${e.message}`);
     if (btn) btn.textContent = old;
