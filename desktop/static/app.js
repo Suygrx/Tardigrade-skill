@@ -175,6 +175,7 @@ const tf = (k, vars) => {
 function applyStaticLang() {
   document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => { el.title = t(el.dataset.i18nTitle); });
   $("#view-title").textContent = VIEW_TITLES[document.body.dataset.view] || "";
   const sel = $("#lang-select");
   if (sel) sel.value = LANG;
@@ -185,7 +186,9 @@ document.addEventListener("change", async (e) => {
   localStorage.setItem("tardigrade.lang", LANG);
   try { await api("/api/settings", { roots: SETTINGS.roots || [], download_dir: SETTINGS.download_dir || null, language: LANG }); } catch (err) { /* 服务端记录失败不影响 UI */ }
   applyStaticLang();
+  closeDrawer(); // 抽屉内已渲染文本不会自动重译，直接关闭
   renderPlatformPill(); renderHome(); renderManage(); renderMatrix(); loadPending();
+  ping(); // 刷新连接/模型徽章与设置页动态行（已连接、已配置 等）
 });
 
 const VIEW_TITLES = { home: "", get manage() { return t("view_manage"); }, get discover() { return t("view_discover"); } };
@@ -336,6 +339,8 @@ function setView(name) {
   $("#view-title").classList.toggle("hidden", name === "home");
   $("#btn-back").classList.toggle("hidden", name === "home");
   $("#platform-pill").classList.toggle("hidden", name !== "home");
+  // 非主页隐藏第二行后顶栏变矮，内容区上移保持与顶栏贴合
+  document.body.classList.toggle("pill-hidden", name !== "home");
   $("#btn-manage").classList.toggle("current", name === "manage");
   $("#btn-go-discover").classList.toggle("hidden", name === "discover");
 
@@ -345,6 +350,12 @@ function setView(name) {
 
 document.querySelectorAll("[data-view]").forEach((btn) => {
   btn.addEventListener("click", () => setView(btn.dataset.view));
+});
+
+/* 顶栏 ⚙：打开 Skills 管理里的设置面板 */
+$("#btn-settings").addEventListener("click", () => {
+  setView("manage");
+  mgTab("settings");
 });
 
 function switchView(name) { setView(name); }

@@ -124,6 +124,7 @@ body {
 
 /* ---------------- main ---------------- */
 #main { height: 100vh; overflow-y: auto; padding: 118px 24px 32px; }
+body.pill-hidden #main { padding-top: 76px; } /* 非主页隐藏平台切换行后顶栏变矮 */
 .view { display: none; }
 .view.active { display: block; }
 .view-toolbar {
@@ -408,6 +409,12 @@ table.changelog { width: 100%; border-collapse: collapse; font-size: 12px; margi
   white-space: nowrap; flex-shrink: 0;
 }
 .tb-manage-btn:hover { border-color: var(--primary); color: var(--primary); }
+.tb-settings-btn {
+  height: 30px; width: 34px; padding: 0; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--card); color: var(--fg);
+  font-size: 15px; cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+.tb-settings-btn:hover { border-color: var(--primary); color: var(--primary); }
 
 .tb-viewtitle { font-size: 13px; color: var(--muted-fg); margin-left: 8px; }
 
