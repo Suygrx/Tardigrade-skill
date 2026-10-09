@@ -540,6 +540,39 @@ table.matrix td.skill-name .dir { max-width: 260px; overflow: hidden; text-overf
   font-size: 13px; transition: all 0.15s; flex-shrink: 0;
 }
 .mg-del:hover { border-color: var(--incompatible); color: var(--incompatible); background: var(--incompatible-bg); }
+.mg-adapt {
+  width: 30px; height: 30px; border-radius: var(--radius-sm); cursor: pointer;
+  border: 1px solid transparent; background: transparent; color: var(--muted-fg);
+  font-size: 13px; transition: all 0.15s; flex-shrink: 0;
+}
+.mg-adapt:hover { border-color: var(--primary); color: var(--primary); background: rgba(21, 131, 248, 0.1); }
+
+/* ── Skills 管理列表：同仓库多 skill 归组（可折叠卡片） ── */
+.mg-group {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--card); overflow: hidden;
+}
+.mg-group-head {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+  cursor: pointer; user-select: none; transition: background 0.15s;
+}
+.mg-group-head:hover { background: rgba(255, 255, 255, 0.03); }
+.mg-arrow { color: var(--muted-fg); font-size: 11px; transition: transform 0.15s; flex-shrink: 0; }
+.mg-group.open .mg-arrow { transform: rotate(90deg); }
+.mg-group-label { font-size: 14px; font-weight: 600; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mg-group-meta { font-size: 12px; color: var(--muted-fg); flex-shrink: 0; }
+.mg-group-icons { display: flex; gap: 4px; margin-left: auto; flex-shrink: 0; }
+.mg-group-icons .plat-toggle {
+  width: 24px; height: 24px; font-size: 12px; cursor: default; opacity: 0.45;
+  border: 1px solid transparent; background: transparent;
+}
+.mg-group-icons .plat-toggle.on { opacity: 1; border-color: var(--pc, var(--emerald)); background: rgba(16, 185, 129, 0.1); }
+.mg-group-children {
+  display: none; flex-direction: column; gap: 6px; padding: 2px 10px 10px 10px;
+  border-top: 1px solid var(--border);
+}
+.mg-group.open .mg-group-children { display: flex; }
+.mg-group-children .mg-row { border: none; background: var(--muted); padding: 10px 12px; }
 
 /* ============================================================
    市场卡片：名称跳转开源地址

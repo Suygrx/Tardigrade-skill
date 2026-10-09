@@ -7,7 +7,7 @@ let SETTINGS = { roots: [], download_dir: "" };
 let INSTALLED = null;
 let LIBRARY = null;
 let SELECTED_PLATFORM = localStorage.getItem("tardigrade.platform") || "claude-code";
-const MANAGE = { rows: [], platforms: [], filter: null, q: "" };
+const MANAGE = { rows: [], platforms: [], filter: null, q: "", expanded: new Set() };
 
 const TIER_LABELS = {
   zh: {
@@ -72,6 +72,7 @@ const I18N = {
     adapt_pending_ok: "适配产物已生成，请到「Skills 管理 → 待确认」确认安装", adapt_status: "适配结果：", adapt_fail: "适配失败：",
     no_adapt_plan: "当前 {p} 不适配「{s}」（{t}），暂无自动适配方案",
     batch_btn_title: "对该 skill 的全部检测平台批量适配（分桶执行）",
+    grp_meta: "{n} 个 skill · {m} 处使用中",
     batch_confirm: "对「{s}」的全部本机平台执行批量适配？\n能力齐全的平台会直接安装（不消耗 token），需要改写的平台各跑一次模型，产物进入「待确认」。",
     batch_running: "批量适配中…（并行执行，约几十秒）", batch_done: "批量适配完成：", batch_noop: "无动作", batch_fail: "批量适配失败：",
     l2_h3: "L2 适配（BYOK）", l2_desc: "规则层判定存在可降级缺口，LLM 适配可产出可安装变体；产物需人工确认后才落盘。",
@@ -138,6 +139,7 @@ const I18N = {
     adapt_pending_ok: "Adapted product generated — confirm it in Skills 管理 → Pending", adapt_status: "Adapt result: ", adapt_fail: "Adapt failed: ",
     no_adapt_plan: "{p} does not support \"{s}\" ({t}); no automatic adaptation available",
     batch_btn_title: "Batch-adapt this skill across all detected platforms (bucketed)",
+    grp_meta: "{n} skills · {m} in use",
     batch_confirm: "Batch-adapt \"{s}\" across all local platforms?\nFully compatible platforms install directly (no tokens); each platform needing a rewrite runs one model call; products go to Pending.",
     batch_running: "Batch adapting… (in parallel, tens of seconds)", batch_done: "Batch adaptation finished: ", batch_noop: "nothing to do", batch_fail: "Batch adaptation failed: ",
     l2_h3: "L2 adaptation (BYOK)", l2_desc: "Rule-level verdict found degradable gaps; LLM adaptation can produce an installable variant; the product must be confirmed before it lands on disk.",
@@ -540,13 +542,13 @@ async function loadManage() {
 function buildManageRows() {
   const rows = new Map();
   for (const s of LIBRARY.skills) {
-    rows.set(s.name, { name: s.name, dir: s.dir, inLib: true, enabled: {} });
+    rows.set(s.name, { name: s.name, dir: s.dir, inLib: true, source: s.source || "", enabled: {} });
   }
   for (const p of INSTALLED.platforms) {
     for (const s of p.skills) {
       let row = rows.get(s.skill);
       if (!row) {
-        row = { name: s.skill, dir: s.dest, inLib: false, enabled: {} };
+        row = { name: s.skill, dir: s.dest, inLib: false, source: "", enabled: {} };
         rows.set(s.skill, row);
       }
       if (s.present) row.enabled[p.agent] = true;
@@ -554,6 +556,20 @@ function buildManageRows() {
   }
   MANAGE.rows = [...rows.values()].sort((a, b) => a.name.localeCompare(b.name));
   MANAGE.platforms = visiblePlatforms();
+}
+
+/* 库分组：同一个开源仓库（market:<repo-url>）下的多个 skill 归为一组统一管理 */
+function groupKeyOf(r) {
+  if (r.source && r.source.startsWith("market:")) return r.source.slice("market:".length);
+  return "row:" + r.name;
+}
+function groupLabelOf(key) {
+  if (key.startsWith("row:")) return key.slice(4);
+  try {
+    const u = new URL(key);
+    const parts = u.pathname.replace(/\.git$/, "").split("/").filter(Boolean);
+    return parts.slice(-2).join("/") || key;
+  } catch (e) { return key; }
 }
 
 function renderManage() {
@@ -580,32 +596,78 @@ function renderManage() {
   const rows = MANAGE.rows.filter((r) => (q ? matchQ(r) : !MANAGE.filter || r.enabled[MANAGE.filter]));
   const hiddenByFilter = q && MANAGE.filter ? MANAGE.rows.filter((r) => matchQ(r) && !r.enabled[MANAGE.filter]).length : 0;
 
+  const rowIcons = (r) => MANAGE.platforms
+    .map((p) => {
+      const meta = metaOf(p.agent, p.name);
+      const on = !!r.enabled[p.agent];
+      return `<button class="plat-toggle ${on ? "on" : ""}" data-skill="${r.name}" data-agent="${p.agent}"
+        title="${meta.short}${t(on ? "mg_on" : "mg_off")}"
+        style="--pc:${meta.color}">${logoImg(p.agent)}</button>`;
+    })
+    .join("");
+  const rowHtml = (r) => `<div class="mg-row">
+      <div class="mg-row-main">
+        <div class="prov-title-row"><span class="mg-name" data-dir="${r.dir}" title="${t("view_md")}">${r.name}</span></div>
+        <div class="mg-path" title="${r.dir}">${r.dir}</div>
+      </div>
+      <div class="mg-icons">${rowIcons(r)}<button class="mg-adapt" data-skill="${r.name}" data-dir="${r.dir}" title="${t("batch_btn_title")}">⚡</button><button class="mg-del" data-skill="${r.name}" title="${t("title_del")}">✕</button></div>
+    </div>`;
+
+  // 按 source 分组：同一开源仓库（market:<url>）的多个 skill 收进一个可折叠卡片
+  const groups = [];
+  const byKey = new Map();
+  for (const r of rows) {
+    const key = groupKeyOf(r);
+    if (!byKey.has(key)) {
+      const g = { key, label: groupLabelOf(key), rows: [], market: !key.startsWith("row:") };
+      byKey.set(key, g);
+      groups.push(g);
+    }
+    byKey.get(key).rows.push(r);
+  }
+  const groupHtml = (g) => {
+    if (g.rows.length === 1 && !g.market) return rowHtml(g.rows[0]); // 单个本地/外部 skill 不包壳
+    const open = q ? true : MANAGE.expanded.has(g.key);
+    const inUse = g.rows.reduce((n, r) => n + Object.keys(r.enabled).length, 0);
+    const headIcons = MANAGE.platforms
+      .map((p) => {
+        const meta = metaOf(p.agent, p.name);
+        const any = g.rows.some((r) => r.enabled[p.agent]);
+        return `<span class="plat-toggle ${any ? "on" : ""}" title="${meta.short}" style="--pc:${meta.color}">${logoImg(p.agent)}</span>`;
+      })
+      .join("");
+    return `<div class="mg-group ${open ? "open" : ""}" data-gkey="${g.key}">
+      <div class="mg-group-head">
+        <span class="mg-arrow">▶</span>
+        <span class="mg-group-label">${g.label}</span>
+        <span class="mg-group-meta">${tf("grp_meta", { n: g.rows.length, m: inUse })}</span>
+        <span class="mg-group-icons">${headIcons}</span>
+      </div>
+      <div class="mg-group-children">${g.rows.map(rowHtml).join("")}</div>
+    </div>`;
+  };
+
   $("#mg-list").innerHTML = rows.length
-    ? `<div class="mg-rows">` + rows.map((r) => {
-        const icons = MANAGE.platforms
-          .map((p) => {
-            const meta = metaOf(p.agent, p.name);
-            const on = !!r.enabled[p.agent];
-            return `<button class="plat-toggle ${on ? "on" : ""}" data-skill="${r.name}" data-agent="${p.agent}"
-              title="${meta.short}${t(on ? "mg_on" : "mg_off")}"
-              style="--pc:${meta.color}">${logoImg(p.agent)}</button>`;
-          })
-          .join("");
-        return `<div class="mg-row">
-          <div class="mg-row-main">
-            <div class="prov-title-row"><span class="mg-name" data-dir="${r.dir}" title="${t("view_md")}">${r.name}</span></div>
-            <div class="mg-path" title="${r.dir}">${r.dir}</div>
-          </div>
-          <div class="mg-icons">${icons}<button class="mg-del" data-skill="${r.name}" title="${t("title_del")}">✕</button></div>
-        </div>`;
-      }).join("") + `</div>` + (hiddenByFilter ? `<div class="prov-empty">${tf("mg_hidden_more", { n: hiddenByFilter })}<span class="mg-clear-filter" style="color:var(--primary);cursor:pointer">${t("mg_clear")}</span></div>` : "")
+    ? `<div class="mg-rows">` + groups.map(groupHtml).join("") + `</div>`
+      + (hiddenByFilter ? `<div class="prov-empty">${tf("mg_hidden_more", { n: hiddenByFilter })}<span class="mg-clear-filter" style="color:var(--primary);cursor:pointer">${t("mg_clear")}</span></div>` : "")
     : `<div class="prov-empty">${hiddenByFilter ? `${tf("mg_hidden_all", { n: hiddenByFilter })}<span class="mg-clear-filter" style="color:var(--primary);cursor:pointer">${t("mg_clear")}</span>` : t("mg_none")}</div>`;
 
-  $("#mg-list").querySelectorAll(".plat-toggle").forEach((b) =>
+  $("#mg-list").querySelectorAll(".mg-group-head").forEach((h) =>
+    h.addEventListener("click", () => {
+      const key = h.closest(".mg-group").dataset.gkey;
+      if (MANAGE.expanded.has(key)) MANAGE.expanded.delete(key);
+      else MANAGE.expanded.add(key);
+      renderManage();
+    })
+  );
+  $("#mg-list").querySelectorAll("button.plat-toggle").forEach((b) =>
     b.addEventListener("click", () => togglePlatform(b.dataset.skill, b.dataset.agent))
   );
   $("#mg-list").querySelectorAll(".mg-name").forEach((n) =>
     n.addEventListener("click", () => showSkillMd(n.dataset.dir))
+  );
+  $("#mg-list").querySelectorAll(".mg-adapt").forEach((b) =>
+    b.addEventListener("click", (e) => { e.stopPropagation(); batchAdapt(b.dataset.skill, b.dataset.dir); })
   );
   $("#mg-list").querySelectorAll(".mg-del").forEach((b) =>
     b.addEventListener("click", () => deleteLibrarySkill(b.dataset.skill))
@@ -728,16 +790,12 @@ function renderMatrix() {
         })
         .join("");
       return `<tr class="${row.valid ? "" : "invalid"}"><td class="skill-name">${row.skill}
-        <button class="btn batch-adapt" data-skill="${row.skill}" data-dir="${row.dir}" title="${t("batch_btn_title")}">${t("batch_adapt")}</button>
         <span class="dir" title="${row.dir}">${row.dir}</span></td>${cells}</tr>`;
     })
     .join("");
   wrap.innerHTML = `<div class="matrix-scroll"><div class="matrix-card"><table class="matrix"><thead><tr><th class="skill-col">Skill</th>${thead}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
   wrap.querySelectorAll("td.cell").forEach((td) =>
     td.addEventListener("click", () => openDrawer(td.dataset.skill, td.dataset.agent))
-  );
-  wrap.querySelectorAll(".batch-adapt").forEach((b) =>
-    b.addEventListener("click", (e) => { e.stopPropagation(); batchAdapt(b.dataset.skill, b.dataset.dir); })
   );
 }
 
@@ -749,6 +807,7 @@ async function batchAdapt(skill, dir) {
     const s = r.summary || {};
     const line = Object.entries(s).map(([k, v]) => `${k}×${v}`).join("，");
     toast(t("batch_done") + (line || t("batch_noop")));
+    loadManage();
     loadMatrix();
     refreshPendingDot();
   } catch (e) { toast(t("batch_fail") + e.message); }
