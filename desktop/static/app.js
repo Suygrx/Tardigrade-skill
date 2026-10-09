@@ -191,7 +191,7 @@ document.addEventListener("change", async (e) => {
   ping(); // 刷新连接/模型徽章与设置页动态行（已连接、已配置 等）
 });
 
-const VIEW_TITLES = { home: "", get manage() { return t("view_manage"); }, get discover() { return t("view_discover"); } };
+const VIEW_TITLES = { home: "", get manage() { return t("view_manage"); }, get discover() { return t("view_discover"); }, get settings() { return t("tab_settings"); } };
 
 async function api(path, body) {
   const opts = body
@@ -346,17 +346,15 @@ function setView(name) {
 
   if (name === "home") loadHome();
   if (name === "manage") loadManage();
+  if (name === "settings") loadSettings();
 }
 
 document.querySelectorAll("[data-view]").forEach((btn) => {
   btn.addEventListener("click", () => setView(btn.dataset.view));
 });
 
-/* 顶栏 ⚙：打开 Skills 管理里的设置面板 */
-$("#btn-settings").addEventListener("click", () => {
-  setView("manage");
-  mgTab("settings");
-});
+/* 顶栏 ⚙：打开独立的设置视图 */
+$("#btn-settings").addEventListener("click", () => setView("settings"));
 
 function switchView(name) { setView(name); }
 
@@ -536,11 +534,12 @@ async function ping() {
 function mgTab(name) {
   document.querySelectorAll(".mg-tab").forEach((t) => t.classList.toggle("active", t.dataset.mg === name));
   document.querySelectorAll(".mg-pane").forEach((p) => p.classList.remove("active"));
-  $(`#mg-${name}`).classList.add("active");
+  const pane = $(`#mg-${name}`);
+  if (!pane) return; // 设置已迁出为独立视图（view-settings）
+  pane.classList.add("active");
   if (name === "skills") loadManage();
   if (name === "matrix") loadMatrix();
   if (name === "pending") loadPending();
-  if (name === "settings") loadSettings();
 }
 document.querySelectorAll(".mg-tab").forEach((t) => t.addEventListener("click", () => mgTab(t.dataset.mg)));
 
