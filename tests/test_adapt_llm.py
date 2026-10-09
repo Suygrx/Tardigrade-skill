@@ -208,3 +208,50 @@ def test_source_hash_stable_and_sensitive(tmp_path: Path) -> None:
     assert h1 == source_hash(d1)
     (d1 / "scripts" / "helper.py").write_text("print('changed')\n", encoding="utf-8")
     assert h1 != source_hash(d1)
+
+
+# ------------------------------------------------------------------ mechanical / multi-file / recheck
+
+def test_mechanical_frontmatter_trims_whitelist(tmp_path: Path) -> None:
+    strict = PlatformProfile.model_validate({"id": "strict", "name": "Strict", "frontmatter_fields": ["name", "description"]})
+    md = VALID_SKILL_MD  # has license + metadata beyond the whitelist
+    new_text, dropped = adapt_llm.mechanical_frontmatter(md, strict)
+    assert dropped == ["license", "metadata"]
+    assert "license" not in new_text.split("---")[1]
+    assert "name: sample-skill" in new_text
+    # 平台支持全部字段时不做任何改动
+    same, dropped2 = adapt_llm.mechanical_frontmatter(md, CURSOR_LIKE)
+    assert dropped2 == [] and same == md
+
+
+def test_adapt_prompt_contains_supporting_files_and_judgment(tmp_path: Path, monkeypatch) -> None:
+    adapt_llm.reset_store()
+    d = _skill_with_blocks(tmp_path)
+    ir = build_ir(d)
+    calls = _mock_llm(monkeypatch, [_good_response(ir)])
+    r = adapt_skill(d, CURSOR_LIKE, CFG)
+    assert r["status"] == "pending"
+    user = calls[0]["user"]
+    # scripts 内容作为围栏数据进入 prompt
+    assert "UNTRUSTED SUPPORTING FILES" in user
+    assert "print('hi')" in user
+    # 判定层的真实 gaps/caveats 进入 prompt（resident-rules 平台 -> auto-trigger gap）
+    assert "auto-trigger" in user
+
+
+def test_adapt_skips_non_adapted_tier(tmp_path: Path, monkeypatch) -> None:
+    adapt_llm.reset_store()
+    d = _skill_with_blocks(tmp_path)
+    calls = _mock_llm(monkeypatch, [])
+    capable = PlatformProfile.model_validate(
+        {
+            "id": "capable",
+            "name": "Capable",
+            "discovery": "native-skills",
+            "capabilities": {"shell": {"supported": True}, "network": {"supported": True}, "fs_write": {"supported": True}},
+            "script_runtime": "python",
+        }
+    )
+    r = adapt_skill(d, capable, CFG)
+    assert r["status"] == "not-adapted" and r["tier"] == "full"
+    assert calls == []  # 0 token

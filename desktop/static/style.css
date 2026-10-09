@@ -606,3 +606,9 @@ table.matrix td.skill-name .dir { max-width: 260px; overflow: hidden; text-overf
 /* Skills 管理页工具栏（导入按钮行） */
 .mg-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .mg-toolbar .view-desc { margin: 0; }
+
+/* 适配性测试：行内一键适配按钮 */
+.batch-adapt {
+  font-size: 11px; padding: 2px 8px; height: auto; margin: 4px 8px 0 0;
+  display: inline-block; vertical-align: middle;
+}

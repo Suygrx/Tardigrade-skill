@@ -558,13 +558,31 @@ function renderMatrix() {
           return `<td class="cell" data-skill="${row.skill}" data-agent="${p.id}"><span class="badge ${cls}">${label}</span></td>`;
         })
         .join("");
-      return `<tr class="${row.valid ? "" : "invalid"}"><td class="skill-name">${row.skill}<span class="dir" title="${row.dir}">${row.dir}</span></td>${cells}</tr>`;
+      return `<tr class="${row.valid ? "" : "invalid"}"><td class="skill-name">${row.skill}
+        <button class="btn batch-adapt" data-skill="${row.skill}" data-dir="${row.dir}" title="对该 skill 的全部检测平台批量适配（分桶执行）">一键适配</button>
+        <span class="dir" title="${row.dir}">${row.dir}</span></td>${cells}</tr>`;
     })
     .join("");
   wrap.innerHTML = `<div class="matrix-scroll"><div class="matrix-card"><table class="matrix"><thead><tr><th class="skill-col">Skill</th>${thead}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
   wrap.querySelectorAll("td.cell").forEach((td) =>
     td.addEventListener("click", () => openDrawer(td.dataset.skill, td.dataset.agent))
   );
+  wrap.querySelectorAll(".batch-adapt").forEach((b) =>
+    b.addEventListener("click", (e) => { e.stopPropagation(); batchAdapt(b.dataset.skill, b.dataset.dir); })
+  );
+}
+
+async function batchAdapt(skill, dir) {
+  if (!(await ask(`对「${skill}」的全部本机平台执行批量适配？\n能力齐全的平台会直接安装（不消耗 token），需要改写的平台各跑一次模型，产物进入「待确认」。`))) return;
+  toast("批量适配中…（并行执行，约几十秒）");
+  try {
+    const r = await api("/api/adapt-batch", dir ? { skill, dir } : { skill });
+    const s = r.summary || {};
+    const line = Object.entries(s).map(([k, v]) => `${k}×${v}`).join("，");
+    toast(`批量适配完成：${line || "无动作"}`);
+    loadMatrix();
+    refreshPendingDot();
+  } catch (e) { toast(`批量适配失败：${e.message}`); }
 }
 
 /* ---------------- adaptation drawer ---------------- */

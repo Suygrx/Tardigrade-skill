@@ -72,6 +72,12 @@ class AdaptBody(BaseModel):
     dir: str | None = None  # library/任意允许目录下的 skill 源目录（管理页开关触发适配时使用）
 
 
+class AdaptBatchBody(BaseModel):
+    skill: str
+    dir: str | None = None
+    agents: list[str] | None = None  # 缺省 = 本机检测到的全部平台
+
+
 class AdaptationIdBody(BaseModel):
     id: str
 
@@ -329,16 +335,71 @@ def create_app() -> FastAPI:
             if not (d / "SKILL.md").is_file():
                 raise HTTPException(400, "该目录没有 SKILL.md，不是有效的 skill")
         else:
-            skill_dirs = {dd.name: dd for dd in _scan_skills(_roots_or_400(None))}
+            scan_roots = [r for r in [*state["roots"], state["download_dir"]] if Path(r).is_dir()]
+            skill_dirs = {dd.name: dd for dd in _scan_skills(scan_roots)}
             d = skill_dirs.get(body.skill)
             if d is None:
-                raise HTTPException(404, f"skill '{body.skill}' not found in roots")
+                raise HTTPException(404, f"skill '{body.skill}' not found in roots or library")
         judgment = judge_skill(d, profiles[body.agent])
         if judgment.tier != "adapted":
             raise HTTPException(400, f"tier is '{judgment.tier}', only 'adapted' cells run the LLM engine")
         result = adapt_llm.adapt_skill(d, profiles[body.agent])
         result["judgment"] = judgment.to_dict()
         return result
+
+    @app.post("/api/adapt-batch")
+    def adapt_batch(body: AdaptBatchBody) -> dict:
+        """单 skill × 多平台批量适配（方案 C 分桶）。
+
+        full/full* → 直接 dispatch 安装（与开关语义一致，0 token）；
+        adapted    → 每平台 1 次 L2 调用，产物进待确认；
+        其余       → 跳过并给出原因。
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        from tardigrade_skill.dispatcher import DispatchError, detect_platforms, dispatch
+
+        if body.dir:
+            d = Path(body.dir).expanduser()
+            if not (d / "SKILL.md").is_file():
+                raise HTTPException(400, "该目录没有 SKILL.md，不是有效的 skill")
+        else:
+            scan_roots = [r for r in [*state["roots"], state["download_dir"]] if Path(r).is_dir()]
+            skill_dirs = {dd.name: dd for dd in _scan_skills(scan_roots)}
+            d = skill_dirs.get(body.skill)
+            if d is None:
+                raise HTTPException(404, f"skill '{body.skill}' not found in roots or library")
+
+        targets = body.agents or [a for a, ok in detect_platforms().items() if ok]
+        targets = [a for a in targets if a in profiles]
+        if not targets:
+            raise HTTPException(400, "没有可适配的目标平台")
+
+        def one(agent: str) -> dict:
+            profile = profiles[agent]
+            try:
+                judgment = judge_skill(d, profile)
+            except Exception as e:
+                return {"agent": agent, "action": "error", "message": str(e)}
+            if judgment.tier in {"full", "full*"}:
+                try:
+                    dest = dispatch(d, agent)
+                    adapt_llm.record_install(d.name, agent, dest, source=f"adapt-batch:{d}")
+                    return {"agent": agent, "tier": judgment.tier, "action": "installed", "dest": str(dest)}
+                except DispatchError as e:
+                    return {"agent": agent, "tier": judgment.tier, "action": "error", "message": str(e)}
+            if judgment.tier == "adapted":
+                r = adapt_llm.adapt_skill(d, profile)
+                return {"agent": agent, "tier": judgment.tier, "action": r.get("status", "failed"),
+                        "id": r.get("id"), "recheck": r.get("recheck"), "message": r.get("message")}
+            return {"agent": agent, "tier": judgment.tier, "action": "skipped", "reasons": judgment.reasons}
+
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            results = list(ex.map(one, targets))
+        summary = {}
+        for r in results:
+            summary[r["action"]] = summary.get(r["action"], 0) + 1
+        return {"ok": True, "skill": d.name, "results": results, "summary": summary}
 
     @app.get("/api/adaptations")
     def adaptations(status: str | None = None) -> dict:

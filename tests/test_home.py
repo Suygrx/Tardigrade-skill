@@ -199,3 +199,41 @@ def test_detect_platforms_requires_nonempty_dir(monkeypatch, tmp_path: Path) -> 
     monkeypatch.setattr(dispatcher, "DETECT_DIRS", {"codex": str(real), "kilo": str(empty), "trae": str(tmp_path / "missing")})
     out = dispatcher.detect_platforms()
     assert out == {"codex": True, "kilo": False, "trae": False}
+
+
+def test_adapt_batch_buckets(tmp_path: Path, isolated_store) -> None:
+    """批量适配分桶：full 直接安装，adapted 进待确认（mock LLM），其余跳过。"""
+    from types import SimpleNamespace
+    import sys
+
+    c = _client()  # 先触发 server.app 导入
+    app_module = sys.modules["server.app"]
+    c.post("/api/settings", json={"roots": [str(REPO / "demo" / "skills")], "download_dir": str(tmp_path / "lib")})
+
+    def fake_judge(skill_dir, profile):
+        return SimpleNamespace(
+            agent=profile.id, skill=Path(skill_dir).name,
+            tier="full" if profile.id == "codex" else ("partial" if profile.id == "droid" else "adapted"),
+            reasons=[], gaps=["auto-trigger"] if profile.id != "codex" else [], caveats=[],
+            resident_tokens=10, to_dict=lambda: {},
+        )
+
+    orig_judge = app_module.judge_skill
+    orig_adapt = app_module.adapt_llm.adapt_skill
+    app_module.judge_skill = fake_judge
+    app_module.adapt_llm.adapt_skill = lambda skill_dir, profile, config=None: {
+        "status": "pending", "id": "fake123", "recheck": "full", "message": ""
+    }
+    try:
+        r = c.post("/api/adapt-batch", json={"skill": "pdf-helper", "agents": ["codex", "workbuddy", "droid"]})
+        assert r.status_code == 200
+        data = r.json()
+        by_agent = {x["agent"]: x for x in data["results"]}
+        assert by_agent["codex"]["action"] == "installed"          # full 桶：直接安装
+        assert by_agent["workbuddy"]["action"] == "pending"        # adapted 桶：进待确认
+        assert by_agent["droid"]["action"] == "skipped"            # 无脚本运行时：跳过
+        assert data["summary"]["installed"] == 1 and data["summary"]["pending"] == 1
+        assert Path(by_agent["codex"]["dest"]).is_dir()
+    finally:
+        app_module.judge_skill = orig_judge
+        app_module.adapt_llm.adapt_skill = orig_adapt
