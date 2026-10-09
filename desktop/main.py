@@ -66,7 +66,11 @@ def main() -> None:
         try:
             import webview  # pywebview
 
-            webview.create_window("Tardigrade-skill", url, width=1180, height=760, min_size=(960, 640))
+            # background_color 必须与页面深色底一致：默认白底会在大面积重绘时露白（闪烁）
+            webview.create_window(
+                "Tardigrade-skill", url, width=1180, height=760, min_size=(960, 640),
+                background_color="#1d1d20",
+            )
             webview.start()
         except ImportError:
             print(f"pywebview not installed — dev fallback: opening {url} in your browser. Ctrl+C to quit.")

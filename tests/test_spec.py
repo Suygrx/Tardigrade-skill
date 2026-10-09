@@ -32,7 +32,7 @@ def test_name_consecutive_hyphens_rejected(tmp_path):
 def test_description_too_long_rejected(tmp_path):
     md = VALID_SKILL_MD.replace(
         "description: A benign sample skill used in tests. Use when testing tardigrade-skill.",
-        "description: " + "x" * 1025,
+        "description: " + "x" * 2049,
     )
     d = make_skill(tmp_path, skill_md=md)
     assert validate_skill(d) != []

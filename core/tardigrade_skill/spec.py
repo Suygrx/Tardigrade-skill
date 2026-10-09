@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, field_validator
 
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 NAME_MAX = 64
-DESC_MAX = 1024
+DESC_MAX = 2048
 COMPAT_MAX = 500
 
 ALLOWED_FIELDS = {
@@ -124,14 +124,17 @@ def load_skill(skill_dir: Path) -> tuple[SkillMeta, str, list[str]]:
 
 
 def validate_skill(skill_dir: Path) -> list[str]:
-    """Validate a skill directory, returning a list of problems (empty = valid)."""
+    """Validate a skill directory, returning a list of problems (empty = valid).
+
+    只有硬性违规（SpecError）算无效；未知 frontmatter 字段等 warnings 不影响
+    有效性（市场 skill 普遍带 displayName/homepage 等扩展字段）。
+    """
     problems: list[str] = []
     skill_dir = Path(skill_dir)
     if not skill_dir.is_dir():
         return [f"not a directory: {skill_dir}"]
     try:
-        _, _, warns = load_skill(skill_dir)
-        problems.extend(warns)
+        load_skill(skill_dir)  # 硬违规才记 problem；warnings 不影响有效性
     except SpecError as e:
         problems.append(str(e))
     return problems

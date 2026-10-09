@@ -10,21 +10,25 @@
 <body data-view="home" data-page-node-id="xyiwvRnTKey8qeDYNLLCLV">
 <!-- 顶栏（CC Switch v3 布局：品牌 | 平台分段切换 | Skills管理 + 橙色+） -->
 <header class="topbar" data-page-node-id="vRsQRCT1i5g92ql4cQH5Ki">
-  <div class="tb-left" data-page-node-id="qXQNwBDPaoCiMLIDDgX1WE">
-    <button id="btn-back" class="tb-icon-btn hidden" data-view="home" title="返回主页" data-page-node-id="CrxHCpunLARRAR6ogzUGxz">←</button>
-    <div class="tb-brand" data-page-node-id="VMhtVGeN6RZuPDSbQ2AjBN">
-      <img class="tb-logo" src="logo-icon-dark.png" alt="" data-page-node-id="esx6ZSe3qg8NOiEgO1tLy9">
-      <span class="tb-name" data-page-node-id="pTqwHxhP0S8GHnBHPulAvF">Tardigrade-skill</span>
+  <div class="tb-row" data-page-node-id="qXQNwBDPaoCiMLIDDgX1WE">
+    <div class="tb-left" data-page-node-id="qXQNwBDPaoCiMLIDDgX1WE2">
+      <button id="btn-back" class="tb-icon-btn hidden" data-view="home" title="返回主页" data-page-node-id="CrxHCpunLARRAR6ogzUGxz">←</button>
+      <div class="tb-brand" data-page-node-id="VMhtVGeN6RZuPDSbQ2AjBN">
+        <img class="tb-logo" src="logo-icon-dark.png" alt="" data-page-node-id="esx6ZSe3qg8NOiEgO1tLy9">
+        <span class="tb-name" data-page-node-id="pTqwHxhP0S8GHnBHPulAvF">Tardigrade-skill</span>
+      </div>
+      <div id="view-title" class="tb-viewtitle hidden" data-page-node-id="RSgcgJaNX2I7ZOOSFE4XEw">Skills 管理</div>
     </div>
-    <div id="view-title" class="tb-viewtitle hidden" data-page-node-id="RSgcgJaNX2I7ZOOSFE4XEw">Skills 管理</div>
+
+    <div class="tb-right" data-page-node-id="4db57m2UYvIDNzS1kY2U13">
+      <button id="btn-manage" class="tb-manage-btn" data-view="manage" data-i18n="manage_btn" data-page-node-id="WZZMJ27dioK7vriqg9L77g">Skills 管理</button>
+      <button id="btn-go-discover" class="tb-add" title="去市场安装 skill" data-page-node-id="VCTc6nu2vbBNIYjxYAFIXf">＋</button>
+    </div>
   </div>
 
-  <div class="tb-right" data-page-node-id="4db57m2UYvIDNzS1kY2U13">
-    <!-- 平台分段切换（仅主页显示，JS 渲染） -->
-    <div id="platform-pill" class="app-switcher" data-page-node-id="SohaGenwVFfKVrHDDfnHGt"></div>
-
-    <button id="btn-manage" class="tb-manage-btn" data-view="manage" data-i18n="manage_btn" data-page-node-id="WZZMJ27dioK7vriqg9L77g">Skills 管理</button>
-    <button id="btn-go-discover" class="tb-add" title="去市场安装 skill" data-page-node-id="VCTc6nu2vbBNIYjxYAFIXf">＋</button>
+  <div class="tb-row tb-row-switcher" data-page-node-id="SohaGenwVFfKVrHDDfnHGt">
+    <!-- 平台分段切换（JS 渲染） -->
+    <div id="platform-pill" class="app-switcher" data-page-node-id="SohaGenwVFfKVrHDDfnHGt2"></div>
   </div>
 </header>
 
