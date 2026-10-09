@@ -5,8 +5,8 @@ Thanks for your interest! The project is in alpha; issues and PRs are both welco
 ## Development setup
 
 ```bash
-git clone https://github.com/Suygrx/skill-lock.git
-cd skill-lock
+git clone https://github.com/Suygrx/Tardigrade-skill.git
+cd Tardigrade-skill
 python -m venv .venv
 .venv/Scripts/python -m pip install -r requirements-dev.txt   # Windows
 # Linux/macOS: .venv/bin/python -m pip install -r requirements-dev.txt

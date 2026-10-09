@@ -1,6 +1,6 @@
 # Tardigrade Skill
 
-[![CI](https://github.com/Suygrx/skill-lock/actions/workflows/ci.yml/badge.svg)](https://github.com/Suygrx/skill-lock/actions/workflows/ci.yml)
+[![CI](https://github.com/Suygrx/Tardigrade-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/Suygrx/Tardigrade-skill/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Desktop manager + adaptation engine for **Agent Skills** (the [agentskills.io](https://agentskills.io) format).
