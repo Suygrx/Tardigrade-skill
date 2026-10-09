@@ -51,7 +51,7 @@ const I18N = {
     in_place: "✓ 在位", missing_dir: "ⓘ 安装目录不存在", pill_repo: "仓库安装", pill_matrix: "矩阵应用", pill_missing: "缺失", pill_local: "本机已有", pill_lib: "库",
     home_empty: "该平台还没有安装任何 skill", home_empty_hint: "点右上角 <span style=\"color:var(--orange)\">＋</span> 去「市场」搜索安装，或在「Skills 管理」导入本地 skill",
     mg_none: "没有匹配的 skill", mg_hidden_more: "另有 {n} 个匹配的 skill 被平台过滤隐藏（尚未在任何平台开启）——", mg_hidden_all: "共找到 {n} 个匹配的 skill，但都被平台过滤隐藏（尚未开启）——", mg_clear: "清除平台过滤",
-    mg_on: "：已开启（点击关闭）", mg_off: "：未开启（点击开启）",
+    mg_on: "：使用中（点击取消使用，本地库保留）", mg_off: "：未使用（点击开启）",
     matrix_scanning: "正在扫描 skills…", matrix_none: "扫描目录中没有找到 skill（含 SKILL.md 的目录）。可在「设置」里添加扫描目录。",
     ch_block: "Block", ch_action: "动作", ch_reason: "原因", ch_lost: "丢失内容", ch_repl: "替代",
     act_kept: "保留", act_rewritten: "改写", act_dropped: "删除",
@@ -66,7 +66,8 @@ const I18N = {
     chip_all: "全部", title_detected: "（检测到本机存在其非空配置目录）", title_del: "删除（本地库 + 已开启的平台）",
     delete_confirm: "删除「{s}」？将移除：{w}。该操作不可恢复。", delete_nowhere: "（未在任何位置找到，仅清记录）",
     lib: "本地库", lib_fail: "本地库：", delete_partial: "删除完成但有失败：", deleted_ok: "已删除「{s}」（{n} 处）",
-    confirm_off: "确定在 {p} 上关闭（卸载）「{s}」？", enable_fail: "开启失败：", enabled_to: "已开启：",
+    confirm_off: "确定在 {p} 上取消使用「{s}」？不会删除 skill，本地库保留，再次点击图标即可重新开启。", enable_fail: "开启失败：", enabled_to: "已开启：",
+    disabled_to: "已取消使用：",
     ask_adapt: "当前 {p} 不适配「{s}」（{t}），是否要进行适配性处理？", adapting: "适配中…（调用 BYOK 模型，产物需确认后安装）",
     adapt_pending_ok: "适配产物已生成，请到「Skills 管理 → 待确认」确认安装", adapt_status: "适配结果：", adapt_fail: "适配失败：",
     no_adapt_plan: "当前 {p} 不适配「{s}」（{t}），暂无自动适配方案",
@@ -116,7 +117,7 @@ const I18N = {
     in_place: "✓ present", missing_dir: "ⓘ install dir missing", pill_repo: "from repo", pill_matrix: "via matrix", pill_missing: "missing", pill_local: "on device", pill_lib: "library",
     home_empty: "No skills installed on this platform yet", home_empty_hint: "Use the <span style=\"color:var(--orange)\">＋</span> button (top right) to search the market, or import a local skill in Skills 管理",
     mg_none: "No matching skill", mg_hidden_more: "{n} more matching skill(s) hidden by the platform filter (not enabled anywhere) — ", mg_hidden_all: "Found {n} matching skill(s), all hidden by the platform filter (not enabled) — ", mg_clear: "clear platform filter",
-    mg_on: ": enabled (click to disable)", mg_off: ": not enabled (click to enable)",
+    mg_on: ": in use (click to stop using — library kept)", mg_off: ": not in use (click to enable)",
     matrix_scanning: "Scanning skills…", matrix_none: "No skill (a directory with SKILL.md) found in scan dirs. Add them in Settings.",
     ch_block: "Block", ch_action: "Action", ch_reason: "Reason", ch_lost: "Lost", ch_repl: "Replacement",
     act_kept: "kept", act_rewritten: "rewritten", act_dropped: "dropped",
@@ -131,7 +132,8 @@ const I18N = {
     chip_all: "All", title_detected: " (a non-empty config dir was detected on this machine)", title_del: "Delete (library + enabled platforms)",
     delete_confirm: "Delete \"{s}\"? This will remove: {w}. This cannot be undone.", delete_nowhere: "(found nowhere, clearing records only)",
     lib: "library", lib_fail: "library: ", delete_partial: "Deleted with some failures: ", deleted_ok: "Deleted \"{s}\" ({n} place(s))",
-    confirm_off: "Disable (uninstall) \"{s}\" on {p}?", enable_fail: "Enable failed: ", enabled_to: "Enabled: ",
+    confirm_off: "Stop using \"{s}\" on {p}? The skill is NOT deleted — it stays in the library; click the icon again to re-enable.", enable_fail: "Enable failed: ", enabled_to: "Enabled: ",
+    disabled_to: "Stopped using: ",
     ask_adapt: "{p} does not natively support \"{s}\" ({t}). Run adaptation?", adapting: "Adapting… (calling the BYOK model; confirm before install)",
     adapt_pending_ok: "Adapted product generated — confirm it in Skills 管理 → Pending", adapt_status: "Adapt result: ", adapt_fail: "Adapt failed: ",
     no_adapt_plan: "{p} does not support \"{s}\" ({t}); no automatic adaptation available",
@@ -645,7 +647,7 @@ async function togglePlatform(skill, agent) {
     if (!(await ask(tf("confirm_off", { p: pname, s: skill })))) return;
     try {
       const r = await api("/api/uninstall", { skill, agent });
-      toast(r.ok ? t("uninstalled") + r.removed : r.message);
+      toast(r.ok ? t("disabled_to") + skill + "（" + pname + "）" : r.message);
     } catch (e) { toast(t("uninstall_fail") + e.message); }
     loadManage();
     return;
