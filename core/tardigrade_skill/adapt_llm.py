@@ -230,7 +230,18 @@ def _materialize_product(src: Path, dest_root: Path, adapted_md: str) -> Path:
 # ------------------------------------------------------------------ pipeline
 
 
-def adapt_skill(skill_dir: Path, profile: PlatformProfile, config: llm.ModelConfig | None = None) -> dict:
+LANG_INSTRUCTIONS = {
+    "zh": "Write all 'reason', 'lost', 'replacement' values in the changelog, and 'notes', in Simplified Chinese (简体中文). Do NOT translate the skill content itself — only your explanatory texts.",
+    "en": "Write all 'reason', 'lost', 'replacement' values in the changelog, and 'notes', in English.",
+}
+
+
+def adapt_skill(
+    skill_dir: Path,
+    profile: PlatformProfile,
+    config: llm.ModelConfig | None = None,
+    language: str = "zh",
+) -> dict:
     """Run (or reuse) the L2 adaptation of one skill for one platform."""
     skill_dir = Path(skill_dir)
     ir = build_ir(skill_dir)  # SpecError propagates
@@ -279,7 +290,12 @@ def adapt_skill(skill_dir: Path, profile: PlatformProfile, config: llm.ModelConf
         return {"status": "failed", "message": str(e)}
 
     supporting = _supporting_files(skill_dir, ir)
-    system = SYSTEM_RULES + f"\nCANARY (must never appear in your output): {canary}\n"
+    system = (
+        SYSTEM_RULES
+        + f"\nCANARY (must never appear in your output): {canary}\n"
+        + LANG_INSTRUCTIONS.get(language, LANG_INSTRUCTIONS["zh"])
+        + "\n"
+    )
     user = _build_user_prompt(ir, judgment, profile, fenced, supporting=supporting, mechanical_note=mech_note)
 
     last_problem = ""

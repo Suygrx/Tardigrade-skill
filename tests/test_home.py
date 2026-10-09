@@ -221,7 +221,7 @@ def test_adapt_batch_buckets(tmp_path: Path, isolated_store) -> None:
     orig_judge = app_module.judge_skill
     orig_adapt = app_module.adapt_llm.adapt_skill
     app_module.judge_skill = fake_judge
-    app_module.adapt_llm.adapt_skill = lambda skill_dir, profile, config=None: {
+    app_module.adapt_llm.adapt_skill = lambda skill_dir, profile, config=None, language="zh": {
         "status": "pending", "id": "fake123", "recheck": "full", "message": ""
     }
     try:

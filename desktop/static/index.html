@@ -23,7 +23,7 @@
     <!-- 平台分段切换（仅主页显示，JS 渲染） -->
     <div id="platform-pill" class="app-switcher" data-page-node-id="SohaGenwVFfKVrHDDfnHGt"></div>
 
-    <button id="btn-manage" class="tb-manage-btn" data-view="manage" data-page-node-id="WZZMJ27dioK7vriqg9L77g">Skills 管理</button>
+    <button id="btn-manage" class="tb-manage-btn" data-view="manage" data-i18n="manage_btn" data-page-node-id="WZZMJ27dioK7vriqg9L77g">Skills 管理</button>
     <button id="btn-go-discover" class="tb-add" title="去市场安装 skill" data-page-node-id="VCTc6nu2vbBNIYjxYAFIXf">＋</button>
   </div>
 </header>
@@ -37,26 +37,26 @@
   <!-- Skills 管理页（Skills / 适配性测试 / 待确认 / 设置 四合一） -->
   <section id="view-manage" class="view" data-page-node-id="9BaCoiSEEDbb4ynaNhkpcR">
     <div class="mg-tabs" data-page-node-id="SHGra8n43bcehEYL4dvB0j">
-      <button class="mg-tab active" data-mg="skills" data-page-node-id="Fvr7W7tinBoe0uey33Oh6W">Skills</button>
-      <button class="mg-tab" data-mg="matrix" data-page-node-id="gOvJVixrXhHV6AAJHYbF6v">适配性测试</button>
-      <button class="mg-tab" data-mg="pending" data-page-node-id="v5NGFX70CIBG8c5ljEAgNX">待确认 <span id="pending-dot-mg" class="pending-dot-mg hidden" data-page-node-id="yvAC1Bi3ksgd4L7flVgpf7">•</span></button>
-      <button class="mg-tab" data-mg="settings" data-page-node-id="5BKwyIyFkSTtknN1T2cdOw">设置</button>
+      <button class="mg-tab active" data-mg="skills" data-i18n="tab_skills" data-page-node-id="Fvr7W7tinBoe0uey33Oh6W">Skills</button>
+      <button class="mg-tab" data-mg="matrix" data-page-node-id="gOvJVixrXhHV6AAJHYbF6v" data-i18n="tab_matrix">适配性测试</button>
+      <button class="mg-tab" data-mg="pending" data-page-node-id="v5NGFX70CIBG8c5ljEAgNX"><span data-i18n="tab_pending">待确认</span> <span id="pending-dot-mg" class="pending-dot-mg hidden" data-page-node-id="yvAC1Bi3ksgd4L7flVgpf7">•</span></button>
+      <button class="mg-tab" data-mg="settings" data-page-node-id="5BKwyIyFkSTtknN1T2cdOw" data-i18n="tab_settings">设置</button>
     </div>
 
     <!-- ── Skills 库：本机全部 skill × 平台开关 ── -->
     <div id="mg-skills" class="mg-pane active" data-page-node-id="M7MXxrEuwcW7YPdtDUVvm4">
       <div class="mg-toolbar">
-        <button id="btn-mg-import" class="btn">导入本地 skill</button>
-        <span class="view-desc">导入会先安全审计（CRITICAL 拦截），然后落入本地 Skill 库</span>
+        <button id="btn-mg-import" class="btn" data-i18n="import_local">导入本地 skill</button>
+        <span class="view-desc" data-i18n="import_hint">导入会先安全审计（CRITICAL 拦截），然后落入本地 Skill 库</span>
       </div>
       <div id="mg-import-row" class="search-bar hidden">
         <input id="mg-import-path" type="text" placeholder="填写含 SKILL.md 的目录绝对路径，如 D:\my-skills\pdf-tools" spellcheck="false">
-        <button id="btn-mg-import-go" class="btn btn-primary">审计并导入</button>
+        <button id="btn-mg-import-go" class="btn btn-primary" data-i18n="import_go">审计并导入</button>
       </div>
       <div id="mg-import-message" class="discover-message hidden"></div>
       <div id="mg-chips" class="mg-chips" data-page-node-id="uULCXEBeFIvenNV3tJA7mG"></div>
       <div class="search-bar" data-page-node-id="NSaVh47fsKO8EXWGt5VJeE">
-        <input id="mg-search" type="text" placeholder="搜索已安装技能的名称、描述或仓库…" spellcheck="false" data-page-node-id="0zK1G54LBboNAuQBkFKUIP">
+        <input id="mg-search" type="text" placeholder="搜索已安装技能的名称、描述或仓库…" spellcheck="false" data-i18n-ph="ph_mg_search" data-page-node-id="0zK1G54LBboNAuQBkFKUIP">
       </div>
       <div id="mg-list" data-page-node-id="n98LSWqsex94JE6rxBb2VL"><div class="loading" data-page-node-id="atfpU8LjN1onIYAcW55Idh">加载中…</div></div>
     </div>
@@ -66,54 +66,59 @@
       <div class="view-toolbar" data-page-node-id="ecoZ1IS0YIBpBl9JJRLGxe">
         <span class="view-desc" data-page-node-id="Ar1cIHXJIGM0BnlppIiqYI">每个 skill × 每个平台给出明确结论</span>
         <div class="header-actions" data-page-node-id="F9jAt8FoANhOIYcT7zuDUv">
-          <button id="btn-refresh" class="btn" data-page-node-id="0vhqwwVxtuUZLg558XxAOG">刷新</button>
-          <button id="btn-apply-all" class="btn btn-primary" data-page-node-id="6XmPeDDB69pDM5N72kbapX">全部应用</button>
+          <button id="btn-refresh" class="btn" data-i18n="refresh" data-page-node-id="0vhqwwVxtuUZLg558XxAOG">刷新</button>
+          <button id="btn-apply-all" class="btn btn-primary" data-i18n="apply_all" data-page-node-id="6XmPeDDB69pDM5N72kbapX">全部应用</button>
         </div>
       </div>
       <div id="matrix-legend" class="legend" data-page-node-id="7LGRyFhCpP8SbEgmdwBJpi">
-        <span class="badge tier-full" data-page-node-id="btifsBgdhULOkGtuXiLNYS">一键可用</span>
-        <span class="badge tier-full-star" data-page-node-id="g4E26WjbpRadnHA0OlK5gb">可用需确认</span>
-        <span class="badge tier-adapted" data-page-node-id="GzkNJvyGq0duN8Ft4E8JbR">需适配</span>
-        <span class="badge tier-partial" data-page-node-id="BPbWSnBgjYTZrXinO3o6OG">手动步骤</span>
-        <span class="badge tier-incompatible" data-page-node-id="RkP9FD5VfwAZm1YD8Hs2CV">不兼容</span>
+        <span class="badge tier-full" data-i18n="tier_full" data-page-node-id="btifsBgdhULOkGtuXiLNYS">一键可用</span>
+        <span class="badge tier-full-star" data-i18n="tier_full_star" data-page-node-id="g4E26WjbpRadnHA0OlK5gb">可用需确认</span>
+        <span class="badge tier-adapted" data-i18n="tier_adapted" data-page-node-id="GzkNJvyGq0duN8Ft4E8JbR">需适配</span>
+        <span class="badge tier-partial" data-i18n="tier_partial" data-page-node-id="BPbWSnBgjYTZrXinO3o6OG">手动步骤</span>
+        <span class="badge tier-incompatible" data-i18n="tier_incompatible" data-page-node-id="RkP9FD5VfwAZm1YD8Hs2CV">不兼容</span>
       </div>
       <div id="matrix-wrap" data-page-node-id="FR0F02PCM29PFvtGqWkQIK"><div class="loading" data-page-node-id="HtBxRDejF6YnPr3X61F0Oj">正在扫描 skills…</div></div>
     </div>
 
     <!-- ── 待确认（HITL） ── -->
     <div id="mg-pending" class="mg-pane" data-page-node-id="gBCMDxGV4dM06YbqQgKD14">
-      <p class="view-desc view-lead" data-page-node-id="SisYV6Ag9xYgaT1zzmkQVV">LLM 适配产物在确认前不会落盘安装。请核对改动清单（changelog）后决定。</p>
+      <p class="view-desc view-lead" data-page-node-id="SisYV6Ag9xYgaT1zzmkQVV"><span data-i18n="pending_lead">LLM 适配产物在确认前不会落盘安装。请核对改动清单（changelog）后决定。</span></p>
       <div id="pending-list" data-page-node-id="MRHE9YOAjqlzAPRijsLdrJ"><div class="loading" data-page-node-id="oQD0pKQx9uz5SclbRzKvOo">加载中…</div></div>
     </div>
 
     <!-- ── 设置 ── -->
     <div id="mg-settings" class="mg-pane" data-page-node-id="UA7iOi2pSVrcaxKzMSoW9A">
-      <div class="tb-status" data-page-node-id="7wPFwG8s2eytIYz4XjtcWE"><span id="health-badge" data-page-node-id="14Tf58563zG1igAbHfE4ab">连接中…</span><span id="llm-badge" class="llm-badge" data-page-node-id="H81Xy4MupDEDOl81RW6Ahw">模型：检测中…</span></div>
+      <div class="tb-status" data-page-node-id="7wPFwG8s2eytIYz4XjtcWE"><span id="health-badge" data-i18n="connecting" data-page-node-id="14Tf58563zG1igAbHfE4ab">连接中…</span><span id="llm-badge" class="llm-badge" data-page-node-id="H81Xy4MupDEDOl81RW6Ahw">模型：检测中…</span></div>
       <div class="settings-box" data-page-node-id="6J4AsRLRUshbV80GS5KJtk">
-        <h3 class="settings-h3" data-page-node-id="cyF4fieZhut0pKxnKOE7Ll">Skills 扫描目录（每行一个）</h3>
+        <h3 class="settings-h3" data-i18n="settings_lang_h3">界面语言 / Language</h3>
+        <select id="lang-select" class="select">
+          <option value="zh">简体中文</option>
+          <option value="en">English</option>
+        </select>
+        <h3 class="settings-h3" data-page-node-id="cyF4fieZhut0pKxnKOE7Ll" data-i18n="settings_roots_h3">Skills 扫描目录（每行一个）</h3>
         <textarea id="roots-input" rows="4" spellcheck="false"></textarea>
 
-        <h3 class="settings-h3" data-page-node-id="THzxOtJQgztodBzlbrNXZJ">Skill 下载库目录（市场安装 / 本地导入的落库位置）</h3>
+        <h3 class="settings-h3" data-page-node-id="THzxOtJQgztodBzlbrNXZJ" data-i18n="settings_dl_h3">Skill 下载库目录（市场安装 / 本地导入的落库位置）</h3>
         <div class="search-bar" data-page-node-id="e9aVH7v7XqIKADRHeKwK3G">
           <input id="download-dir-input" type="text" spellcheck="false" data-page-node-id="mNcIozBwmVqV5p3hBBaKg7">
-          <button id="btn-save-dl" class="btn" data-page-node-id="8kZFtyLHhH3YbaDx7vWXdK">保存下载目录</button>
+          <button id="btn-save-dl" class="btn" data-i18n="save_dl" data-page-node-id="8kZFtyLHhH3YbaDx7vWXdK">保存下载目录</button>
         </div>
 
-        <button id="btn-save-roots" class="btn btn-primary" data-page-node-id="mwXcGWcoxw6vBWjkGZ2KOt">保存扫描目录</button>
+        <button id="btn-save-roots" class="btn btn-primary" data-i18n="save_roots" data-page-node-id="mwXcGWcoxw6vBWjkGZ2KOt">保存扫描目录</button>
 
-        <h3 class="settings-h3" data-page-node-id="4voMVsExn1k5X9ucmCCCz2">BYOK 模型（L2 适配，任意 OpenAI 兼容端点）</h3>
+        <h3 class="settings-h3" data-page-node-id="4voMVsExn1k5X9ucmCCCz2" data-i18n="settings_llm_h3">BYOK 模型（L2 适配，任意 OpenAI 兼容端点）</h3>
         <div id="llm-status" class="llm-status" data-page-node-id="ff9GqnTQ5JWLOiTmQrykLE">检测中…</div>
         <div class="llm-form" data-page-node-id="ZsPErrx9tgRPxmPM3V4yMX">
           <label data-page-node-id="6I6a9fwPCegVPE3oe5hVIF">Base URL <input id="llm-url" type="text" placeholder="https://api.openai.com/v1" spellcheck="false" data-page-node-id="HnE0RkmeHWo4d7YHEvOkxu"></label>
           <label data-page-node-id="5X1BCq46LZVRR7fDEybUyu">API Key <input id="llm-key" type="password" placeholder="sk-…" spellcheck="false" data-page-node-id="lBF20iHvzEbkUsjaXuNUmP"></label>
           <label data-page-node-id="MPsX1BPViDTviiIi9da2RB">模型名 <input id="llm-model" type="text" placeholder="gpt-4o-mini / deepseek-chat / …" spellcheck="false" data-page-node-id="LTSEKAbdLMGEVcakAOMCSt"></label>
           <div class="llm-form-actions" data-page-node-id="jKh59zQX5RA95r9UryYpRx">
-            <button id="btn-llm-save" class="btn btn-primary" data-page-node-id="uHpKPxNkfPssCEkA4urpVf">保存并自动识别</button>
-            <button id="btn-llm-test" class="btn" data-page-node-id="MBAG7XvV7sKZS9shs3k1E7">重新探测</button>
+            <button id="btn-llm-save" class="btn btn-primary" data-i18n="llm_save" data-page-node-id="uHpKPxNkfPssCEkA4urpVf">保存并自动识别</button>
+            <button id="btn-llm-test" class="btn" data-i18n="llm_test" data-page-node-id="MBAG7XvV7sKZS9shs3k1E7">重新探测</button>
           </div>
         </div>
         <div id="llm-probe" class="llm-probe hidden" data-page-node-id="WNC3jJBbCF3yBM1Wr5zRck"></div>
-        <p class="settings-hint" data-page-node-id="dgax8bM2hBWQXgKAvxbAB5">保存后自动探测端点（GET /models）并列出可用模型；探测不打消耗 token 的请求。密钥只进 LLM 请求，永不落库、不上锁文件。</p>
+        <p class="settings-hint" data-page-node-id="dgax8bM2hBWQXgKAvxbAB5"><span data-i18n="settings_llm_hint">保存后自动探测端点（GET /models）并列出可用模型；探测不打消耗 token 的请求。密钥只进 LLM 请求，永不落库、不上锁文件。</span></p>
       </div>
     </div>
   </section>
@@ -121,14 +126,14 @@
   <!-- 市场（搜索 + 本地导入） -->
   <section id="view-discover" class="view" data-page-node-id="K25gdn9YxhuRzLiS5fXdRR">
     <div class="view-toolbar" data-page-node-id="OWyY9rqbayXoKFwZL9kM0l">
-      <span class="view-desc" data-page-node-id="wxxxHVO8INurFIXqCd8wJW">搜索即审计：GitHub + skills.sh 双源检索，统一下载到本地 Skill 库，适配哪个平台由 Skills 管理里按需开启</span>
+      <span class="view-desc" data-page-node-id="wxxxHVO8INurFIXqCd8wJW"><span data-i18n="market_desc">搜索即审计：GitHub + skills.sh 双源检索，统一下载到本地 Skill 库，适配哪个平台由 Skills 管理里按需开启</span></span>
     </div>
     <div class="search-bar" data-page-node-id="JlFh06Zhof0syWnP00iATs">
-      <input id="discover-input" type="text" placeholder="关键词，如 pdf、github、log…" spellcheck="false" data-page-node-id="OrRsDf4RXDWcGkSHnzG6xL">
-      <button id="btn-search" class="btn btn-primary" data-page-node-id="fe6093U11aE52WpnWgALZb">搜索并审计</button>
+      <input id="discover-input" type="text" placeholder="关键词，如 pdf、github、log…" spellcheck="false" data-i18n-ph="ph_market" data-page-node-id="OrRsDf4RXDWcGkSHnzG6xL">
+      <button id="btn-search" class="btn btn-primary" data-i18n="search_btn" data-page-node-id="fe6093U11aE52WpnWgALZb">搜索并审计</button>
     </div>
     <div id="discover-message" class="discover-message hidden" data-page-node-id="iOVQZxUo9jCIs6Ffp5CSHH"></div>
-    <div id="discover-results" data-page-node-id="Ea0KkQsfSZrcvhbWCRPaC4"><div class="placeholder" data-page-node-id="XKCksmQo0d3BWxZbFVPsmL">输入关键词开始搜索。</div></div>
+    <div id="discover-results" data-page-node-id="Ea0KkQsfSZrcvhbWCRPaC4"><div class="placeholder" data-page-node-id="XKCksmQo0d3BWxZbFVPsmL" data-i18n="market_placeholder">输入关键词开始搜索。</div></div>
   </section>
 </main>
 
@@ -137,8 +142,8 @@
 <div id="confirm-box" class="confirm-box hidden" data-page-node-id="iTkGhao8NowAqnwkgaHGVI">
   <p id="confirm-text" class="confirm-text" data-page-node-id="7ZHULnUbuHcslcHKTFZYnR"></p>
   <div class="confirm-actions" data-page-node-id="dSLBWfA8T1BOuCk7EZ0MTS">
-    <button id="confirm-cancel" class="btn" data-page-node-id="mY9DeqDsDdCLISN18EEHV3">取消</button>
-    <button id="confirm-ok" class="btn btn-primary" data-page-node-id="8qkQ7GsHECyq1NJhzwVt5S">确认</button>
+    <button id="confirm-cancel" class="btn" data-i18n="cancel" data-page-node-id="mY9DeqDsDdCLISN18EEHV3">取消</button>
+    <button id="confirm-ok" class="btn btn-primary" data-i18n="confirm" data-page-node-id="8qkQ7GsHECyq1NJhzwVt5S">确认</button>
   </div>
 </div>
 

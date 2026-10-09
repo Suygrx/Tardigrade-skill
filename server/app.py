@@ -64,6 +64,7 @@ class ApplyBody(BaseModel):
 class SettingsBody(BaseModel):
     roots: list[str]
     download_dir: str | None = None
+    language: str | None = None  # zh | en
 
 
 class AdaptBody(BaseModel):
@@ -146,6 +147,7 @@ def create_app() -> FastAPI:
         "roots": [str(p) for p in _find_demo_roots()],
         "lock_root": Path(__file__).resolve().parents[1],
         "download_dir": default_download_dir,  # 市场/导入的 skill 落库目录（设置可改）
+        "language": "zh",  # UI 与 LLM 适配产物的说明语言（zh | en）
     }
 
     def _library_meta_path() -> Path:
@@ -310,14 +312,16 @@ def create_app() -> FastAPI:
 
     @app.get("/api/settings")
     def get_settings() -> dict:
-        return {"roots": state["roots"], "download_dir": state["download_dir"]}
+        return {"roots": state["roots"], "download_dir": state["download_dir"], "language": state["language"]}
 
     @app.post("/api/settings")
     def set_settings(body: SettingsBody) -> dict:
         state["roots"] = body.roots
         if body.download_dir:
             state["download_dir"] = body.download_dir
-        return {"roots": state["roots"], "download_dir": state["download_dir"]}
+        if body.language in {"zh", "en"}:
+            state["language"] = body.language
+        return {"roots": state["roots"], "download_dir": state["download_dir"], "language": state["language"]}
 
     # ------------------------------------------------------------- L2 adaptation (BYOK)
 
@@ -343,7 +347,7 @@ def create_app() -> FastAPI:
         judgment = judge_skill(d, profiles[body.agent])
         if judgment.tier != "adapted":
             raise HTTPException(400, f"tier is '{judgment.tier}', only 'adapted' cells run the LLM engine")
-        result = adapt_llm.adapt_skill(d, profiles[body.agent])
+        result = adapt_llm.adapt_skill(d, profiles[body.agent], language=state["language"])
         result["judgment"] = judgment.to_dict()
         return result
 
@@ -389,7 +393,7 @@ def create_app() -> FastAPI:
                 except DispatchError as e:
                     return {"agent": agent, "tier": judgment.tier, "action": "error", "message": str(e)}
             if judgment.tier == "adapted":
-                r = adapt_llm.adapt_skill(d, profile)
+                r = adapt_llm.adapt_skill(d, profile, language=state["language"])
                 return {"agent": agent, "tier": judgment.tier, "action": r.get("status", "failed"),
                         "id": r.get("id"), "recheck": r.get("recheck"), "message": r.get("message")}
             return {"agent": agent, "tier": judgment.tier, "action": "skipped", "reasons": judgment.reasons}
