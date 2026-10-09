@@ -13,6 +13,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versioning: SemV
 - Batch adaptation (`一键适配`): bucketed dispatch across all detected platforms.
 - LLM config survives restarts; masked-key display, empty key = keep existing.
 
+### Changed
+- Product display name unified to **Tardigrade Skill** (window title, app UI, README,
+  FastAPI title, LLM system prompt). The PyPI distribution name / CLI command stay
+  `tardigrade-skill`, and the desktop bundle now builds to `dist/Tardigrade Skill/`.
+- PyInstaller spec is now path-agnostic (`SPECPATH`-relative `pathex` / `datas`), so
+  the build works no matter what the checkout folder is called.
+
 ### [0.2.0] - 2026-10
 - SkillIR + platform profiles; deterministic rule layer (L0/L1) judging
   `full` / `full*` / `adapted` / `partial` / `incompatible` per skill × platform.
