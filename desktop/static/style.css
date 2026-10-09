@@ -124,7 +124,7 @@ body {
 
 /* ---------------- main ---------------- */
 #main { height: 100vh; overflow-y: auto; padding: 118px 24px 32px; }
-body.pill-hidden #main { padding-top: 76px; } /* 非主页隐藏平台切换行后顶栏变矮 */
+/* 第二行始终保留（⚙ / Skills 管理 / ＋），顶栏高度恒定，勿改动此顶距 */
 .view { display: none; }
 .view.active { display: block; }
 .view-toolbar {

@@ -546,6 +546,8 @@ document.querySelectorAll(".mg-tab").forEach((t) => t.addEventListener("click", 
 
 async function loadManage() {
   MD_CACHE.clear(); // 库可能已变化，SKILL.md 缓存失效
+  const sc = $("#main");
+  const scrollPos = sc ? sc.scrollTop : 0; // 重渲染后恢复滚动位置（否则跳回顶部）
   $("#mg-list").innerHTML = '<div class="loading">' + t("loading") + '</div>';
   try {
     const [lib, inst] = await Promise.all([api("/api/library"), api("/api/installed")]);
@@ -553,6 +555,7 @@ async function loadManage() {
     INSTALLED = inst;
     buildManageRows();
     renderManage();
+    if (sc) sc.scrollTop = scrollPos;
   } catch (e) {
     $("#mg-list").innerHTML = `<div class="loading">${t("load_fail")}${e.message}</div>`;
   }
@@ -717,13 +720,24 @@ async function togglePlatform(skill, agent) {
   const row = MANAGE.rows.find((r) => r.name === skill);
   if (!row) return;
   const pname = metaOf(agent).short;
+  // 就地更新该行平台图标（不整表重渲染，避免闪烁与滚动跳顶）
+  const syncRow = () => {
+    const btn = document.querySelector(
+      `#mg-list button.plat-toggle[data-skill="${CSS.escape(skill)}"][data-agent="${CSS.escape(agent)}"]`
+    );
+    if (btn) {
+      btn.classList.toggle("on", !!row.enabled[agent]);
+      btn.title = `${pname}${t(row.enabled[agent] ? "mg_on" : "mg_off")}`;
+    }
+  };
   if (row.enabled[agent]) {
     if (!(await ask(tf("confirm_off", { p: pname, s: skill })))) return;
     try {
       const r = await api("/api/uninstall", { skill, agent });
+      if (r.ok) row.enabled[agent] = false;
       toast(r.ok ? t("disabled_to") + skill + "（" + pname + "）" : r.message);
+      syncRow();
     } catch (e) { toast(t("uninstall_fail") + e.message); }
-    loadManage();
     return;
   }
   let r;
@@ -731,8 +745,9 @@ async function togglePlatform(skill, agent) {
     r = await api("/api/toggle", { dir: row.dir, agent });
   } catch (e) { return toast(t("enable_fail") + e.message); }
   if (r.ok) {
+    row.enabled[agent] = true;
+    syncRow();
     toast(t("enabled_to") + `${skill} → ${pname}`);
-    loadManage();
     return;
   }
   // 不适配：弹窗询问是否走适配处理
