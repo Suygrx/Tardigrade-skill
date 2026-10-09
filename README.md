@@ -1,4 +1,4 @@
-# Tardigrade-skill
+# Tardigrade Skill
 
 [![CI](https://github.com/Suygrx/skill-lock/actions/workflows/ci.yml/badge.svg)](https://github.com/Suygrx/skill-lock/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -64,7 +64,7 @@ Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ```bash
 .venv/Scripts/pyinstaller tardigrade-skill.spec --noconfirm
-# output: dist/Tardigrade-skill/Tardigrade-skill.exe
+# output: dist/Tardigrade Skill/Tardigrade Skill.exe
 ```
 
 ## CLI usage

@@ -62,7 +62,7 @@ def save_model_config(base_url: str, api_key: str, model: str, path: Path | None
     # json.dumps yields TOML-compatible basic-string escaping (backslashes, quotes)
     esc = lambda s: json.dumps(str(s))
     cfg_path.write_text(
-        "# ~/.tardigrade/models.toml - managed by Tardigrade-skill settings UI\n"
+        "# ~/.tardigrade/models.toml - managed by Tardigrade Skill settings UI\n"
         "[default]\n"
         f"base_url = {esc(base_url.strip().rstrip('/'))}\n"
         f"api_key = {esc(api_key.strip())}\n"

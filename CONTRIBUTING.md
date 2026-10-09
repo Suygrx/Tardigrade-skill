@@ -1,4 +1,4 @@
-# Contributing to tardigrade-skill
+# Contributing to Tardigrade Skill
 
 Thanks for your interest! The project is in alpha; issues and PRs are both welcome.
 

@@ -1,4 +1,4 @@
-/* Tardigrade-skill desktop frontend — CC Switch style (dark, topbar, skills management) */
+/* Tardigrade Skill desktop frontend — CC Switch style (dark, topbar, skills management) */
 "use strict";
 
 const $ = (sel) => document.querySelector(sel);

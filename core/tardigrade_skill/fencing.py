@@ -20,7 +20,7 @@ FENCE_CLOSE = "</skill-content fence=\"{nonce}\">"
 
 CANARY_PREFIX = "TGD-CANARY-"
 
-SYSTEM_RULES = """You are the L2 adaptation engine of Tardigrade-skill.
+SYSTEM_RULES = """You are the L2 adaptation engine of Tardigrade Skill.
 You rewrite an Agent Skill so it works on a target platform with fewer capabilities.
 
 STRICT RULES

@@ -1,7 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('desktop/static', 'static'), ('profiles', 'profiles')]
+# SPECPATH 由 PyInstaller 注入 = 本 spec 文件所在目录（即项目根）。
+# 用绝对路径而非相对/硬编码路径，项目根目录改名后依然可打包。
+ROOT = SPECPATH
+
+datas = [(os.path.join(ROOT, 'desktop/static'), 'static'), (os.path.join(ROOT, 'profiles'), 'profiles')]
 binaries = []
 hiddenimports = ['server', 'server.app', 'uvicorn', 'uvicorn.logging', 'uvicorn.loops.auto', 'uvicorn.protocols.http.auto', 'uvicorn.protocols.http.h11_impl', 'uvicorn.protocols.websockets.auto', 'uvicorn.lifespan.on', 'webview.platforms.winforms', 'webview.platforms.edgechromium', 'clr']
 tmp_ret = collect_all('webview')
@@ -12,7 +17,7 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 a = Analysis(
     ['main.py'],
-    pathex=['D:/skill-lock/core', 'D:/skill-lock/server'],
+    pathex=[os.path.join(ROOT, 'core'), os.path.join(ROOT, 'server')],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
@@ -30,7 +35,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='Tardigrade-skill',
+    name='Tardigrade Skill',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -50,5 +55,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='Tardigrade-skill',
+    name='Tardigrade Skill',
 )

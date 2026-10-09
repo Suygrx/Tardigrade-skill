@@ -57,7 +57,7 @@ def main() -> None:
     _wait_ready(url)
 
     if os.environ.get("TARDIGRADE_HEADLESS") == "1":
-        print(f"tardigrade-skill serving (headless) at {url}", flush=True)
+        print(f"Tardigrade Skill serving (headless) at {url}", flush=True)
         try:
             thread.join()
         except KeyboardInterrupt:
@@ -68,7 +68,7 @@ def main() -> None:
 
             # background_color 必须与页面深色底一致：默认白底会在大面积重绘时露白（闪烁）
             webview.create_window(
-                "Tardigrade-skill", url, width=1180, height=760, min_size=(960, 640),
+                "Tardigrade Skill", url, width=1180, height=760, min_size=(960, 640),
                 background_color="#1d1d20",
             )
             webview.start()
