@@ -11,17 +11,17 @@ const MANAGE = { rows: [], platforms: [], filter: null, q: "", expanded: new Set
 
 const TIER_LABELS = {
   zh: {
-    "full": ["一键可用", "tier-full"],
-    "full*": ["可用需确认", "tier-full-star"],
+    "full": ["已装配", "tier-full"],
+    "full*": ["未装配", "tier-full-star"],
     "adapted": ["需适配", "tier-adapted"],
-    "partial": ["手动步骤", "tier-partial"],
+    "partial": ["需手动操作", "tier-partial"],
     "incompatible": ["不兼容", "tier-incompatible"],
   },
   en: {
-    "full": ["One-click ready", "tier-full"],
-    "full*": ["Usable, confirm first", "tier-full-star"],
+    "full": ["Assembled", "tier-full"],
+    "full*": ["Not assembled", "tier-full-star"],
     "adapted": ["Needs adaptation", "tier-adapted"],
-    "partial": ["Manual steps", "tier-partial"],
+    "partial": ["Manual action", "tier-partial"],
     "incompatible": ["Incompatible", "tier-incompatible"],
   },
 };
@@ -36,7 +36,7 @@ const I18N = {
     ph_import: "填写含 SKILL.md 的目录绝对路径，如 D:////my-skills////pdf-tools",
     matrix_desc: "每个 skill × 本机识别到的平台给出明确结论（可左右滑动查看）",
     refresh: "刷新", apply_all: "全部应用",
-    tier_full: "一键可用", tier_full_star: "可用需确认", tier_adapted: "需适配", tier_partial: "手动步骤", tier_incompatible: "不兼容",
+    tier_full: "已装配", tier_full_star: "未装配", tier_adapted: "需适配", tier_partial: "需手动操作", tier_incompatible: "不兼容",
     pending_lead: "LLM 适配产物在确认前不会落盘安装。请核对改动清单（changelog）后决定。",
     settings_roots_h3: "Skills 扫描目录（每行一个）", settings_dl_h3: "Skill 下载库目录（市场安装 / 本地导入的落库位置）",
     settings_llm_h3: "BYOK 模型（L2 适配，任意 OpenAI 兼容端点）", settings_lang_h3: "界面语言 / Language",
@@ -72,7 +72,7 @@ const I18N = {
     adapt_pending_ok: "适配产物已生成，请到「Skills 管理 → 待确认」确认安装", adapt_status: "适配结果：", adapt_fail: "适配失败：",
     no_adapt_plan: "当前 {p} 不适配「{s}」（{t}），暂无自动适配方案",
     batch_btn_title: "对该 skill 的全部检测平台批量适配（分桶执行）",
-    grp_meta: "{n} 个 skill · {m} 处使用中",
+    grp_meta: "{n} 个 skill",
     batch_confirm: "对「{s}」的全部本机平台执行批量适配？\n能力齐全的平台会直接安装（不消耗 token），需要改写的平台各跑一次模型，产物进入「待确认」。",
     batch_running: "批量适配中…（并行执行，约几十秒）", batch_done: "批量适配完成：", batch_noop: "无动作", batch_fail: "批量适配失败：",
     l2_h3: "L2 适配（BYOK）", l2_desc: "规则层判定存在可降级缺口，LLM 适配可产出可安装变体；产物需人工确认后才落盘。",
@@ -86,7 +86,7 @@ const I18N = {
     nothing_to_apply: "没有可应用的 skill", no_oneclick: "没有「一键可用」档位的格子可应用", set_roots_first: "请先在设置中配置扫描目录",
     apply_done: "全部应用完成：成功 {ok}，失败 {fail}", settings_load_fail: "读取设置失败：", saved: "已保存", save_fail: "保存失败：",
     dl_dir_required: "请填写下载库目录", dl_dir_saved: "下载目录已保存",
-    llm_required: "Base URL / API Key / 模型名都需要填写", llm_saving: "保存并探测中…",
+    llm_required: "Base URL / 模型名都需要填写", llm_saving: "保存并探测中…", llm_key_saved: "已保存（留空保持不变）",
     detected_n: " …共 {n} 个", llm_effective: "模型配置已生效",
     kw_required: "请输入关键词", searching: "搜索并审计中…",
     searching_long: "正在搜索并审计（GitHub + skills.sh 双源，并行审计前 5 仓，约需 10–40 秒）…", search_fail: "搜索失败：",
@@ -103,7 +103,7 @@ const I18N = {
     ph_import: "Absolute path of a directory containing SKILL.md, e.g. D:////my-skills////pdf-tools",
     matrix_desc: "Every skill × every detected platform, with a clear verdict (scroll horizontally)",
     refresh: "Refresh", apply_all: "Apply all",
-    tier_full: "One-click ready", tier_full_star: "Usable, confirm first", tier_adapted: "Needs adaptation", tier_partial: "Manual steps", tier_incompatible: "Incompatible",
+    tier_full: "Assembled", tier_full_star: "Not assembled", tier_adapted: "Needs adaptation", tier_partial: "Manual action", tier_incompatible: "Incompatible",
     pending_lead: "Adapted products are not installed until you confirm them. Review the changelog first.",
     settings_roots_h3: "Skill scan directories (one per line)", settings_dl_h3: "Skill library directory (where market installs / imports land)",
     settings_llm_h3: "BYOK model (L2 adaptation, any OpenAI-compatible endpoint)", settings_lang_h3: "界面语言 / Language",
@@ -139,7 +139,7 @@ const I18N = {
     adapt_pending_ok: "Adapted product generated — confirm it in Skills 管理 → Pending", adapt_status: "Adapt result: ", adapt_fail: "Adapt failed: ",
     no_adapt_plan: "{p} does not support \"{s}\" ({t}); no automatic adaptation available",
     batch_btn_title: "Batch-adapt this skill across all detected platforms (bucketed)",
-    grp_meta: "{n} skills · {m} in use",
+    grp_meta: "{n} skills",
     batch_confirm: "Batch-adapt \"{s}\" across all local platforms?\nFully compatible platforms install directly (no tokens); each platform needing a rewrite runs one model call; products go to Pending.",
     batch_running: "Batch adapting… (in parallel, tens of seconds)", batch_done: "Batch adaptation finished: ", batch_noop: "nothing to do", batch_fail: "Batch adaptation failed: ",
     l2_h3: "L2 adaptation (BYOK)", l2_desc: "Rule-level verdict found degradable gaps; LLM adaptation can produce an installable variant; the product must be confirmed before it lands on disk.",
@@ -153,7 +153,7 @@ const I18N = {
     nothing_to_apply: "No skills to apply", no_oneclick: "No one-click-ready cells to apply", set_roots_first: "Configure scan directories in Settings first",
     apply_done: "Apply-all finished: {ok} succeeded, {fail} failed", settings_load_fail: "Failed to load settings: ", saved: "Saved", save_fail: "Save failed: ",
     dl_dir_required: "Enter the library directory first", dl_dir_saved: "Library directory saved",
-    llm_required: "Base URL / API Key / model are all required", llm_saving: "Saving & probing…",
+    llm_required: "Base URL / model are required", llm_saving: "Saving & probing…", llm_key_saved: "saved (leave empty to keep)",
     detected_n: " … {n} total", llm_effective: "Model configuration applied",
     kw_required: "Enter a keyword first", searching: "Searching & auditing…",
     searching_long: "Searching & auditing (GitHub + skills.sh dual source, auditing top 5 repos in parallel, ~10–40 s)…", search_fail: "Search failed: ",
@@ -511,6 +511,13 @@ async function ping() {
         : t("llm_uncfg");
       el.className = "llm-status " + (s.configured ? "ok" : "missing");
     }
+    // 启动回填：已配置的模型把 Base URL / 模型名填回表单，key 只显示打码提示（留空 = 保持不变）
+    if (s.configured) {
+      const urlEl = $("#llm-url"), keyEl = $("#llm-key"), modelEl = $("#llm-model");
+      if (urlEl && !urlEl.value.trim()) urlEl.value = s.base_url || "";
+      if (modelEl && !modelEl.value.trim()) modelEl.value = s.model || "";
+      if (keyEl) keyEl.placeholder = t("llm_key_saved") + (s.api_key_masked ? ` (${s.api_key_masked})` : "");
+    }
   } catch (e) { /* ignore */ }
 }
 
@@ -628,20 +635,11 @@ function renderManage() {
   const groupHtml = (g) => {
     if (g.rows.length === 1 && !g.market) return rowHtml(g.rows[0]); // 单个本地/外部 skill 不包壳
     const open = q ? true : MANAGE.expanded.has(g.key);
-    const inUse = g.rows.reduce((n, r) => n + Object.keys(r.enabled).length, 0);
-    const headIcons = MANAGE.platforms
-      .map((p) => {
-        const meta = metaOf(p.agent, p.name);
-        const any = g.rows.some((r) => r.enabled[p.agent]);
-        return `<span class="plat-toggle ${any ? "on" : ""}" title="${meta.short}" style="--pc:${meta.color}">${logoImg(p.agent)}</span>`;
-      })
-      .join("");
     return `<div class="mg-group ${open ? "open" : ""}" data-gkey="${g.key}">
       <div class="mg-group-head">
         <span class="mg-arrow">▶</span>
         <span class="mg-group-label">${g.label}</span>
-        <span class="mg-group-meta">${tf("grp_meta", { n: g.rows.length, m: inUse })}</span>
-        <span class="mg-group-icons">${headIcons}</span>
+        <span class="mg-group-meta">${tf("grp_meta", { n: g.rows.length })}</span>
       </div>
       <div class="mg-group-children">${g.rows.map(rowHtml).join("")}</div>
     </div>`;
@@ -654,10 +652,12 @@ function renderManage() {
 
   $("#mg-list").querySelectorAll(".mg-group-head").forEach((h) =>
     h.addEventListener("click", () => {
-      const key = h.closest(".mg-group").dataset.gkey;
-      if (MANAGE.expanded.has(key)) MANAGE.expanded.delete(key);
-      else MANAGE.expanded.add(key);
-      renderManage();
+      // 纯 class 切换：子行已在 DOM 中（CSS 控制显隐），不重渲染，避免闪烁
+      const card = h.closest(".mg-group");
+      const key = card.dataset.gkey;
+      const open = !card.classList.contains("open");
+      card.classList.toggle("open", open);
+      if (open) MANAGE.expanded.add(key); else MANAGE.expanded.delete(key);
     })
   );
   $("#mg-list").querySelectorAll("button.plat-toggle").forEach((b) =>
@@ -1033,7 +1033,7 @@ $("#btn-llm-save").addEventListener("click", async () => {
     api_key: $("#llm-key").value.trim(),
     model: $("#llm-model").value.trim(),
   };
-  if (!body.base_url || !body.api_key || !body.model) return toast(t("llm_required"));
+  if (!body.base_url || !body.model) return toast(t("llm_required"));
   const btn = $("#btn-llm-save");
   btn.disabled = true; btn.textContent = t("llm_saving");
   try {

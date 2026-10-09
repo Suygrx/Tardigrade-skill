@@ -328,7 +328,10 @@ def create_app() -> FastAPI:
     @app.get("/api/llm-status")
     def llm_status() -> dict:
         cfg = llm_module.load_model_config()
-        return {"configured": cfg is not None, **(cfg.public_view() if cfg else {})}
+        if cfg is None:
+            return {"configured": False}
+        masked = cfg.api_key[:3] + "****" + cfg.api_key[-4:] if len(cfg.api_key) > 7 else "****"
+        return {"configured": True, **cfg.public_view(), "api_key_masked": masked}
 
     @app.post("/api/adapt")
     def adapt(body: AdaptBody) -> dict:
@@ -421,10 +424,19 @@ def create_app() -> FastAPI:
 
     @app.post("/api/llm/config")
     def llm_config(body: LlmConfigBody) -> dict:
-        """Save the user-provided endpoint/key/model, then auto-probe it."""
-        if not (body.base_url.strip() and body.api_key.strip() and body.model.strip()):
-            raise HTTPException(400, "base_url, api_key and model are all required")
-        cfg_path = llm_module.save_model_config(body.base_url, body.api_key, body.model)
+        """Save the user-provided endpoint/key/model, then auto-probe it.
+
+        api_key 为空表示沿用已保存的 key（表单回填时密钥不打码回显，留空即保持不变）。
+        """
+        if not (body.base_url.strip() and body.model.strip()):
+            raise HTTPException(400, "base_url and model are required")
+        api_key = body.api_key.strip()
+        if not api_key:
+            existing = llm_module.load_model_config()
+            if existing is None:
+                raise HTTPException(400, "api_key is required on first setup")
+            api_key = existing.api_key
+        cfg_path = llm_module.save_model_config(body.base_url, api_key, body.model)
         cfg = llm_module.load_model_config(cfg_path)
         probe = llm_module.test_connection(cfg)
         return {"saved": True, "path": str(cfg_path), **probe}

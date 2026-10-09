@@ -66,12 +66,13 @@ body {
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid transparent;
 }
-.tb-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.tb-brand { display: flex; align-items: center; gap: 8px; margin-right: 4px; }
-.tb-logo { width: 22px; height: 22px; object-fit: contain; display: block; }
+.tb-left { display: flex; align-items: center; gap: 6px; min-width: 0; flex-shrink: 1; }
+.tb-brand { display: flex; align-items: center; gap: 8px; margin-right: 4px; min-width: 0; overflow: hidden; }
+.tb-logo { width: 22px; height: 22px; object-fit: contain; display: block; flex-shrink: 0; }
 .tb-name {
   font-size: 16px; font-weight: 700; color: var(--emerald);
   letter-spacing: 0.01em; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
 }
 .tb-viewtitle { font-size: 15px; font-weight: 600; margin: 0 6px; white-space: nowrap; }
 .tb-right { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; justify-content: flex-end; }
@@ -101,8 +102,9 @@ body {
 .app-switcher {
   display: inline-flex; align-items: center;
   background: var(--muted); border-radius: 12px; padding: 4px; gap: 4px;
-  flex-shrink: 0;
+  overflow-x: auto; max-width: 48vw; scrollbar-width: none;
 }
+.app-switcher::-webkit-scrollbar { display: none; }
 .as-btn {
   display: inline-flex; align-items: center; gap: 6px;
   height: 32px; padding: 0 12px; border: none; border-radius: var(--radius-sm);
@@ -403,6 +405,7 @@ table.changelog { width: 100%; border-collapse: collapse; font-size: 12px; margi
   height: 30px; padding: 0 14px; border-radius: var(--radius-sm);
   border: 1px solid var(--border); background: var(--card); color: var(--fg);
   font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+  white-space: nowrap; flex-shrink: 0;
 }
 .tb-manage-btn:hover { border-color: var(--primary); color: var(--primary); }
 
