@@ -534,6 +534,7 @@ function mgTab(name) {
 document.querySelectorAll(".mg-tab").forEach((t) => t.addEventListener("click", () => mgTab(t.dataset.mg)));
 
 async function loadManage() {
+  MD_CACHE.clear(); // 库可能已变化，SKILL.md 缓存失效
   $("#mg-list").innerHTML = '<div class="loading">' + t("loading") + '</div>';
   try {
     const [lib, inst] = await Promise.all([api("/api/library"), api("/api/installed")]);
@@ -641,7 +642,7 @@ function renderManage() {
         <span class="mg-group-label">${g.label}</span>
         <span class="mg-group-meta">${tf("grp_meta", { n: g.rows.length })}</span>
       </div>
-      <div class="mg-group-children">${g.rows.map(rowHtml).join("")}</div>
+      <div class="mg-group-children"><div class="mg-children-inner">${g.rows.map(rowHtml).join("")}</div></div>
     </div>`;
   };
 
@@ -740,13 +741,20 @@ async function togglePlatform(skill, agent) {
 }
 
 /* skill 详情：读取并渲染 SKILL.md */
+const MD_CACHE = new Map(); // dir -> {name, content}；loadManage 时清空
 async function showSkillMd(dir) {
   $("#drawer-title").textContent = "SKILL.md";
-  $("#drawer-body").innerHTML = '<div class="loading">' + t("detail_loading") + '</div>';
   $("#drawer").classList.remove("hidden");
   $("#drawer-mask").classList.remove("hidden");
+  if (MD_CACHE.has(dir)) {
+    const c = MD_CACHE.get(dir);
+    $("#drawer-body").innerHTML = `<div class="md-doc"><h2 class="md-title">${c.name}</h2>${renderMd(c.content)}</div>`;
+    return;
+  }
+  $("#drawer-body").innerHTML = '<div class="loading">' + t("detail_loading") + '</div>';
   try {
     const r = await api("/api/skill-detail", { path: dir });
+    MD_CACHE.set(dir, { name: r.name, content: r.content });
     $("#drawer-body").innerHTML = `<div class="md-doc"><h2 class="md-title">${r.name}</h2>${renderMd(r.content)}</div>`;
   } catch (e) {
     $("#drawer-body").innerHTML = `<div class="none">${t("detail_err")}${e.message}</div>`;

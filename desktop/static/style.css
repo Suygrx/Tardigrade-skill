@@ -61,12 +61,11 @@ body {
   position: fixed; top: 0; left: 0; right: 0; z-index: 50;
   display: flex; flex-direction: column; align-items: stretch; gap: 8px;
   padding: 10px 24px 10px;
-  background: rgba(29, 29, 32, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #1d1d20; /* 不透明 + 无 blur：backdrop-filter 会在 pywebview 里引发整窗重绘闪烁 */
   border-bottom: 1px solid transparent;
 }
 .tb-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.tb-row-switcher { justify-content: flex-start; }
 .tb-left { display: flex; align-items: center; gap: 6px; min-width: 0; flex-shrink: 1; }
 .tb-brand { display: flex; align-items: center; gap: 8px; margin-right: 4px; min-width: 0; overflow: hidden; }
 .tb-logo { width: 22px; height: 22px; object-fit: contain; display: block; flex-shrink: 0; }
@@ -76,7 +75,7 @@ body {
   overflow: hidden; text-overflow: ellipsis;
 }
 .tb-viewtitle { font-size: 15px; font-weight: 600; margin: 0 6px; white-space: nowrap; }
-.tb-right { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; justify-content: flex-end; }
+.tb-right { display: flex; align-items: center; gap: 10px; min-width: 0; margin-left: auto; justify-content: flex-end; flex-shrink: 0; }
 .tb-views { display: flex; align-items: center; gap: 2px; }
 .tb-icon-btn {
   position: relative;
@@ -572,11 +571,16 @@ table.matrix td.skill-name .dir { max-width: 260px; overflow: hidden; text-overf
 }
 .mg-group-icons .plat-toggle.on { opacity: 1; border-color: var(--pc, var(--emerald)); background: rgba(16, 185, 129, 0.1); }
 .mg-group-children {
-  display: none; flex-direction: column; gap: 6px; padding: 2px 10px 10px 10px;
-  border-top: 1px solid var(--border);
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows 0.18s ease;
 }
-.mg-group.open .mg-group-children { display: flex; }
-.mg-group-children .mg-row { border: none; background: var(--muted); padding: 10px 12px; }
+.mg-group.open .mg-group-children { grid-template-rows: 1fr; }
+.mg-children-inner {
+  overflow: hidden; min-height: 0;
+  display: flex; flex-direction: column; gap: 6px; padding: 0 10px;
+}
+.mg-group.open .mg-children-inner { padding: 2px 10px 10px; border-top: 1px solid var(--border); }
+.mg-children-inner .mg-row { border: none; background: var(--muted); padding: 10px 12px; }
 
 /* ============================================================
    市场卡片：名称跳转开源地址
