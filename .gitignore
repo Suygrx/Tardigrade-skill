@@ -7,3 +7,5 @@ skills.lock
 build/
 dist/
 *.spec
+# PyInstaller spec 是打包配方，必须入库（供他人复现 exe 构建）
+!tardigrade-skill.spec

@@ -1,5 +1,8 @@
 # Tardigrade-skill
 
+[![CI](https://github.com/Suygrx/skill-lock/actions/workflows/ci.yml/badge.svg)](https://github.com/Suygrx/skill-lock/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Desktop manager + adaptation engine for **Agent Skills** (the [agentskills.io](https://agentskills.io) format).
 
 One screen tells you, for every skill × every target platform, whether it can be
@@ -55,6 +58,15 @@ set PYTHONPATH=core;server
 .venv/Scripts/python desktop/main.py     # desktop app (falls back to browser)
 ```
 
+Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+### Build the desktop exe (Windows)
+
+```bash
+.venv/Scripts/pyinstaller tardigrade-skill.spec --noconfirm
+# output: dist/Tardigrade-skill/Tardigrade-skill.exe
+```
+
 ## CLI usage
 
 ```bash
@@ -72,6 +84,11 @@ Install is blocked (exit 2) on CRITICAL findings unless `--allow-risk` is given
 
 ## Status
 
-Alpha (v0.2-dev). Tier 1 MVP done and verified. Now building the desktop
-adaptation matrix (M1: deterministic tiers, then M2: BYOK LLM adaptation + HITL).
+Alpha (v0.2-dev). Tier 1 MVP done and verified. Desktop adaptation matrix with
+deterministic tiers, BYOK LLM adaptation (L2) and HITL confirmation is working.
 Roadmap: `update/outdated`, SARIF reports, signing/provenance, MCP server mode.
+
+## License
+
+[MIT](LICENSE) © 2026 Suygrx. Demo skills under `demo/evil/` are intentionally
+malicious fixtures for the audit test suite — do not install them anywhere.
