@@ -428,7 +428,7 @@ function renderManage() {
             <div class="prov-title-row"><span class="mg-name" data-dir="${r.dir}" title="查看 SKILL.md">${r.name}</span></div>
             <div class="mg-path" title="${r.dir}">${r.dir}</div>
           </div>
-          <div class="mg-icons">${icons}${r.inLib ? `<button class="mg-del" data-skill="${r.name}" title="从本地 Skill 库删除">✕</button>` : ""}</div>
+          <div class="mg-icons">${icons}<button class="mg-del" data-skill="${r.name}" title="删除（本地库 + 已开启的平台）">✕</button></div>
         </div>`;
       }).join("") + `</div>`
     : `<div class="prov-empty">没有匹配的 skill</div>`;
@@ -445,12 +445,25 @@ function renderManage() {
 }
 
 async function deleteLibrarySkill(name) {
-  if (!(await ask(`从本地 Skill 库删除「${name}」？其目录将从下载库中移除（已安装到平台的不受影响，可稍后在各平台手动清理）。`))) return;
-  try {
-    const r = await api("/api/library/delete", { name });
-    toast(r.ok ? `已删除：${name}` : r.message || "删除失败");
-    loadManage();
-  } catch (e) { toast(`删除失败：${e.message}`); }
+  const row = MANAGE.rows.find((r) => r.name === name);
+  const agents = row ? Object.keys(row.enabled).filter((a) => row.enabled[a]) : [];
+  const where = [...(row && row.inLib ? ["本地库"] : []), ...agents.map((a) => metaOf(a).short)];
+  if (!(await ask(`删除「${name}」？将移除：${where.join("、") || "（未在任何位置找到，仅清记录）"}。该操作不可恢复。`))) return;
+  const fails = [];
+  let done = 0;
+  if (row && row.inLib) {
+    try { await api("/api/library/delete", { name }); done++; } catch (e) { fails.push(`本地库：${e.message}`); }
+  }
+  for (const a of agents) {
+    try {
+      const r = await api("/api/uninstall", { skill: name, agent: a });
+      if (r && r.ok === false) fails.push(metaOf(a).short);
+      else done++;
+    } catch (e) { fails.push(`${metaOf(a).short}：${e.message}`); }
+  }
+  toast(fails.length ? `删除完成但有失败：${fails.join("；")}` : `已删除「${name}」（${done} 处）`);
+  loadManage();
+  loadHome();
 }
 
 $("#mg-search").addEventListener("input", (e) => { MANAGE.q = e.target.value; renderManage(); });
