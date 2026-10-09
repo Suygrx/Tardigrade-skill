@@ -80,11 +80,16 @@ def dispatch(skill_dir: Path, agent: str, project: bool = False, dest_override: 
 
 
 def detect_platforms() -> dict[str, bool]:
-    """Which agent platforms are present on this machine (config dir exists)."""
+    """Which agent platforms are present on this machine.
+
+    与 vercel-labs/skills 的 detectInstalled() 一致以配置目录为准，但更严格一档：
+    目录必须存在且**非空**——空壳残留目录（卸载没删干净、其他工具碰巧创建的）不算安装。
+    """
     out: dict[str, bool] = {}
     for agent, raw in DETECT_DIRS.items():
         try:
-            out[agent] = Path(raw).expanduser().is_dir()
+            d = Path(raw).expanduser()
+            out[agent] = d.is_dir() and any(d.iterdir())
         except OSError:  # pragma: no cover - bad home expansion
             out[agent] = False
     return out

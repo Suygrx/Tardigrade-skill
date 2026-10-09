@@ -90,6 +90,8 @@ def test_installed_reports_detected(monkeypatch, tmp_path: Path, isolated_store)
     monkeypatch.setitem(DETECT_DIRS, "codex", str(tmp_path / "codex-home"))
     monkeypatch.setitem(DETECT_DIRS, "claude-code", str(tmp_path / "claude-home"))
     (tmp_path / "codex-home").mkdir()
+    (tmp_path / "codex-home" / "config.json").write_text("{}", encoding="utf-8")  # 非空才算安装
+    (tmp_path / "claude-home").mkdir()  # 空壳目录 -> 未安装
     c = _client()
     platforms = {p["agent"]: p["detected"] for p in c.get("/api/installed").json()["platforms"]}
     assert platforms["codex"] is True
@@ -183,3 +185,17 @@ def test_uninstall_unmanaged_skill(tmp_path: Path, isolated_store, monkeypatch) 
     r2 = c.post("/api/uninstall", json={"skill": "outside", "agent": "codex"})
     assert r2.status_code == 404
     assert outside.exists()
+
+
+def test_detect_platforms_requires_nonempty_dir(monkeypatch, tmp_path: Path) -> None:
+    """空壳配置目录（卸载残留/误创建）不应判定为已安装。"""
+    import tardigrade_skill.dispatcher as dispatcher
+
+    real = tmp_path / "real"
+    empty = tmp_path / "empty"
+    real.mkdir()
+    (real / "settings.json").write_text("{}", encoding="utf-8")
+    empty.mkdir()
+    monkeypatch.setattr(dispatcher, "DETECT_DIRS", {"codex": str(real), "kilo": str(empty), "trae": str(tmp_path / "missing")})
+    out = dispatcher.detect_platforms()
+    assert out == {"codex": True, "kilo": False, "trae": False}

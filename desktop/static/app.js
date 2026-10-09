@@ -233,7 +233,7 @@ function renderPlatformPill() {
   pill.innerHTML = visiblePlatforms()
     .map((p) => {
       const meta = metaOf(p.agent, p.name);
-      return `<button class="as-btn ${p.agent === SELECTED_PLATFORM ? "active" : ""}" data-platform="${p.agent}" title="${p.name}">
+      return `<button class="as-btn ${p.agent === SELECTED_PLATFORM ? "active" : ""}" data-platform="${p.agent}" title="${p.name}（检测到本机存在其非空配置目录）">
         ${logoImg(p.agent)}${meta.short}
       </button>`;
     })
